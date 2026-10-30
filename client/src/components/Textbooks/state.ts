@@ -1,0 +1,15 @@
+import { atom } from 'jotai';
+import { createStorageAtom } from '~/store/jotai-utils';
+
+export type LessonDetails = {
+  topic: string;
+  grade: string;
+  duration: string;
+  date: string;
+};
+
+export const desktopOpen = createStorageAtom('textbooks-panel-open', true);
+export const mobileOpen = atom(false);
+export const search = atom('');
+export const details = atom<LessonDetails>({ topic: '', grade: '', duration: '40', date: '' });
+export const operationError = atom<'upload' | 'send' | null>(null);

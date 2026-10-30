@@ -154,7 +154,10 @@ function ChatPane({
           <QueuedTurnPortalProvider>
             <AddedChatContext.Provider value={addedChatHelpers}>
               <ApprovalProvider pendingAction={pendingAction}>
-                <Presentation routePending={routePending}>
+                <Presentation
+                  routePending={routePending}
+                  textbooksEnabled={index === 0 && !isSubagentThreadReadOnly}
+                >
                   <TraceSurface conversationId={conversationId}>
                     <h1 className="sr-only">{pageHeading}</h1>
                     {/* Marks the header's controls as this pane's, so a pane-scoped

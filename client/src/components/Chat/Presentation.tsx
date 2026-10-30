@@ -9,6 +9,7 @@ import { MessageSurfaceContext } from '~/components/Chat/Messages/ui/surface';
 import DragDropWrapper from '~/components/Chat/Input/Files/DragDropWrapper';
 import UndockedArtifacts from '~/components/Artifacts/UndockedArtifacts';
 import { artifactsUndocked } from '~/components/Artifacts/state';
+import TextbookWorkspace from '~/components/Textbooks/Workspace';
 import { EditorProvider, ArtifactsProvider } from '~/Providers';
 import { SidePanelGroup } from '~/components/SidePanel';
 import AppChatSurface from '~/components/Chat/Surface';
@@ -25,9 +26,11 @@ const SubagentThreadPanel = lazyWithRecovery(
 export default function Presentation({
   children,
   routePending = false,
+  textbooksEnabled = false,
 }: {
   children: React.ReactNode;
   routePending?: boolean;
+  textbooksEnabled?: boolean;
 }) {
   const artifacts = useRecoilValue(store.artifactsState);
   const artifactsVisibility = useRecoilValue(store.artifactsVisibility);
@@ -137,11 +140,20 @@ export default function Presentation({
             isSubmitting={isSubmitting}
           >
             <SidePanelGroup panel={panelElement}>
-              <main className="flex h-full flex-col overflow-y-auto" role="main">
-                <MessageSurfaceContext.Provider value="bg-surface-canvas">
-                  {children}
-                </MessageSurfaceContext.Provider>
-              </main>
+              <TextbookWorkspace
+                enabled={textbooksEnabled && startupConfig?.interface?.textbooks === true}
+                disabled={routePending}
+                suspended={panelElement != null}
+              >
+                <main
+                  className="relative flex h-full min-w-0 flex-1 flex-col overflow-y-auto"
+                  role="main"
+                >
+                  <MessageSurfaceContext.Provider value="bg-surface-canvas">
+                    {children}
+                  </MessageSurfaceContext.Provider>
+                </main>
+              </TextbookWorkspace>
             </SidePanelGroup>
           </ParentSubagentsProvider>
           {isUndocked && artifactsElement != null && (
