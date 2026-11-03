@@ -1,29 +1,32 @@
-import { useId, useRef } from 'react';
-import { BookOpen, Plus, Send, X } from 'lucide-react';
+import { useId } from 'react';
+import { BookOpen, Send, X } from 'lucide-react';
 import { Button, CheckboxGlyph, Input, Label, Spinner } from '@librechat/client';
-import type { TFile } from 'librechat-data-provider';
 import type { LessonDetails } from './state';
+import type { Textbook } from './model';
 import PanelHeader from '~/components/ui/PanelHeader';
+import { isIndexed, canUseTextbook } from './model';
 import { formatFileSize } from '~/utils/files';
 import useLocalize from '~/hooks/useLocalize';
-import { textbookAccept } from './model';
 
 export type TextbookPanelProps = {
-  files: TFile[];
+  files: Textbook[];
   selectedIds: ReadonlySet<string>;
   loading: boolean;
   failed: boolean;
   uploading: boolean;
   canAttach: boolean;
+  canSearch?: boolean;
+  knowledgeLoading?: boolean;
+  knowledgeFailed?: boolean;
   busy: boolean;
-  error: 'upload' | 'send' | null;
+  selectionDisabled?: boolean;
+  error: 'send' | null;
   search: string;
   details: LessonDetails;
   onSearch: (value: string) => void;
   onDetails: (value: LessonDetails) => void;
   onRetry: () => void;
-  onToggle: (file: TFile) => void;
-  onUpload: (files: File[]) => void;
+  onToggle: (file: Textbook) => void;
   onGenerate: () => void;
   onClose: () => void;
 };
@@ -35,7 +38,11 @@ export default function TextbookPanel({
   failed,
   uploading,
   canAttach,
+  canSearch = false,
+  knowledgeLoading = false,
+  knowledgeFailed = false,
   busy,
+  selectionDisabled = false,
   error,
   search,
   details,
@@ -43,20 +50,25 @@ export default function TextbookPanel({
   onDetails,
   onRetry,
   onToggle,
-  onUpload,
   onGenerate,
   onClose,
 }: TextbookPanelProps) {
   const localize = useLocalize();
   const id = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
   const matchingFiles = files.filter((file) =>
     file.filename.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),
   );
-  const selectedCount = files.filter((file) => selectedIds.has(file.file_id)).length;
+  const selected = files.filter((file) => selectedIds.has(file.file_id));
+  const selectedCount = selected.length;
+  const canGenerate =
+    !busy &&
+    !uploading &&
+    selectedCount > 0 &&
+    selected.every((file) => canUseTextbook(file, canAttach, canSearch)) &&
+    details.topic.trim().length > 0;
 
   const renderLibrary = () => {
-    if (loading) {
+    if (loading && files.length === 0) {
       return (
         <div
           className="text-text-secondary flex items-center justify-center gap-2 py-8"
@@ -67,17 +79,10 @@ export default function TextbookPanel({
         </div>
       );
     }
-    if (failed) {
-      return (
-        <div className="space-y-3 py-4 text-center" role="alert">
-          <p className="text-text-secondary text-sm">{localize('com_ui_textbooks_load_error')}</p>
-          <Button variant="outline" size="sm" onClick={onRetry}>
-            {localize('com_ui_retry')}
-          </Button>
-        </div>
-      );
-    }
     if (matchingFiles.length === 0) {
+      if (knowledgeLoading || ((failed || knowledgeFailed) && files.length === 0)) {
+        return null;
+      }
       return (
         <div className="text-text-secondary flex flex-col items-center gap-2 px-2 py-7 text-center">
           <BookOpen className="size-7" aria-hidden="true" />
@@ -92,23 +97,32 @@ export default function TextbookPanel({
       <ul className="space-y-1" aria-label={localize('com_ui_textbooks_available')}>
         {matchingFiles.map((file) => {
           const selected = selectedIds.has(file.file_id);
+          const indexed = isIndexed(file);
+          let status = formatFileSize(file.bytes);
+          if (indexed) {
+            status = localize(
+              canSearch ? 'com_ui_textbooks_indexed' : 'com_ui_textbooks_search_disabled',
+            );
+          } else if (file.llmDeliveryPath === 'none') {
+            status = localize('com_ui_textbooks_unreadable');
+          }
           return (
             <li key={file.file_id}>
               <Button
                 variant="option"
                 aria-pressed={selected}
                 data-selected={selected}
-                disabled={!canAttach || busy || file.llmDeliveryPath === 'none'}
+                disabled={
+                  selectionDisabled ||
+                  (busy && file.agentId == null) ||
+                  !canUseTextbook(file, canAttach, canSearch)
+                }
                 onClick={() => onToggle(file)}
               >
                 <CheckboxGlyph checked={selected} />
                 <span className="min-w-0 flex-1 space-y-1">
                   <span className="block text-sm break-words">{file.filename}</span>
-                  <span className="text-text-secondary block text-xs">
-                    {file.llmDeliveryPath === 'none'
-                      ? localize('com_ui_textbooks_unreadable')
-                      : formatFileSize(file.bytes)}
-                  </span>
+                  <span className="text-text-secondary block text-xs">{status}</span>
                 </span>
               </Button>
             </li>
@@ -148,40 +162,34 @@ export default function TextbookPanel({
         </p>
       </PanelHeader>
 
-      <div className="min-h-28 flex-1 overflow-y-auto px-3 py-2" aria-busy={loading}>
+      <div
+        className="min-h-28 flex-1 overflow-y-auto px-3 py-2"
+        aria-busy={loading || knowledgeLoading}
+      >
+        {(failed || knowledgeFailed) && (
+          <div className="space-y-3 py-4 text-center" role="alert">
+            <p className="text-text-secondary text-sm">
+              {localize(
+                knowledgeFailed
+                  ? 'com_ui_textbooks_agent_load_error'
+                  : 'com_ui_textbooks_load_error',
+              )}
+            </p>
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              {localize('com_ui_retry')}
+            </Button>
+          </div>
+        )}
+        {knowledgeLoading && (
+          <p className="text-text-secondary px-2 py-3 text-xs" role="status">
+            {localize('com_ui_textbooks_agent_loading')}
+          </p>
+        )}
         {renderLibrary()}
       </div>
 
       <div className="space-y-2 px-4 pb-4">
-        <Button
-          variant="outline"
-          className="w-full"
-          disabled={!canAttach || busy || uploading}
-          onClick={() => inputRef.current?.click()}
-        >
-          {uploading ? (
-            <Spinner className="size-4" />
-          ) : (
-            <Plus className="size-4" aria-hidden="true" />
-          )}
-          {localize(uploading ? 'com_ui_textbooks_uploading' : 'com_ui_textbooks_upload')}
-        </Button>
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          accept={textbookAccept}
-          className="hidden"
-          aria-label={localize('com_ui_textbooks_upload')}
-          onChange={(event) => {
-            const selectedFiles = Array.from(event.target.files ?? []);
-            event.target.value = '';
-            if (selectedFiles.length > 0) {
-              onUpload(selectedFiles);
-            }
-          }}
-        />
-        {!canAttach && (
+        {!canAttach && files.some((file) => file.agentId == null) && (
           <p className="text-text-secondary text-xs" role="status">
             {localize('com_ui_textbooks_unsupported')}
           </p>
@@ -195,7 +203,7 @@ export default function TextbookPanel({
         className="border-border-light space-y-3 border-t p-4"
         onSubmit={(event) => {
           event.preventDefault();
-          if (!busy && !uploading && canAttach && selectedCount > 0 && details.topic.trim()) {
+          if (canGenerate) {
             onGenerate();
           }
         }}
@@ -250,16 +258,10 @@ export default function TextbookPanel({
         </p>
         {error && (
           <p className="text-text-destructive text-xs" role="alert">
-            {localize(
-              error === 'upload' ? 'com_ui_textbooks_upload_error' : 'com_ui_textbooks_send_error',
-            )}
+            {localize('com_ui_textbooks_send_error')}
           </p>
         )}
-        <Button
-          type="submit"
-          className="w-full whitespace-normal"
-          disabled={busy || uploading || !canAttach || selectedCount === 0 || !details.topic.trim()}
-        >
+        <Button type="submit" className="w-full whitespace-normal" disabled={!canGenerate}>
           <Send className="size-4 shrink-0" aria-hidden="true" />
           {localize('com_ui_textbooks_generate')}
         </Button>

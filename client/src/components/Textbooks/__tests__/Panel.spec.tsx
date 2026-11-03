@@ -44,7 +44,6 @@ function renderPanel(overrides: Partial<TextbookPanelProps> = {}) {
   const callbacks = {
     onRetry: jest.fn(),
     onToggle: jest.fn(),
-    onUpload: jest.fn(),
     onGenerate: jest.fn(),
     onClose: jest.fn(),
   };
@@ -96,7 +95,7 @@ describe('textbook panel', () => {
     fireEvent.click(biology);
     expect(onToggle).toHaveBeenCalledWith(books[0]);
     expect(biology).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText('1 textbook selected for your next message')).toBeInTheDocument();
+    expect(screen.getByText('1 textbook selected for lesson planning')).toBeInTheDocument();
     fireEvent.click(biology);
     expect(biology).toHaveAttribute('aria-pressed', 'false');
   });
@@ -107,18 +106,15 @@ describe('textbook panel', () => {
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'ENGLISH' } });
     expect(screen.queryByRole('button', { name: /Grade 9 Biology/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Grade 10 English/ })).toBeInTheDocument();
-    expect(screen.getByText('1 textbook selected for your next message')).toBeInTheDocument();
+    expect(screen.getByText('1 textbook selected for lesson planning')).toBeInTheDocument();
   });
 
-  it('passes multiple selected documents to the upload flow and resets the picker', () => {
-    const { container, onUpload } = renderPanel();
-    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
-    const files = [new File(['book'], 'Biology.pdf', { type: 'application/pdf' })];
-    expect(input).toHaveAttribute('multiple');
-    expect(input.accept).toContain('.pdf');
-    fireEvent.change(input, { target: { files } });
-    expect(onUpload).toHaveBeenCalledWith(files);
-    expect(input.value).toBe('');
+  it('offers selection of available books without an upload control', () => {
+    const { container } = renderPanel();
+    expect(screen.getByRole('button', { name: /Grade 9 Biology/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Grade 10 English/ })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: /Upload.*textbook/i })).not.toBeInTheDocument();
+    expect(container.querySelector('input[type="file"]')).not.toBeInTheDocument();
   });
 
   it('requires a selected textbook and topic before generating a plan', () => {
@@ -144,9 +140,6 @@ describe('textbook panel', () => {
         details: { topic: 'Cells', grade: '9', duration: '40', date: '' },
       });
       expect(screen.getByRole('button', { name: 'Create daily lesson plan' })).toBeDisabled();
-      expect(
-        screen.getByRole('button', { name: /Upload.*textbook|Uploading textbook/ }),
-      ).toBeDisabled();
     },
   );
 
@@ -156,6 +149,96 @@ describe('textbook panel', () => {
     expect(screen.getByText('This file cannot be used as model context.')).toBeInTheDocument();
   });
 
+  it('selects indexed tool-only books and announces their ready status', () => {
+    const { onToggle } = renderPanel({
+      files: [{ ...books[0], embedded: true, llmDeliveryPath: 'none' }],
+      canSearch: true,
+    });
+    const biology = screen.getByRole('button', { name: /Grade 9 Biology/ });
+    expect(biology).toBeEnabled();
+    expect(screen.getByText('Indexed · ready for File Search')).toBeInTheDocument();
+    fireEvent.click(biology);
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps agent books selectable while chat activity blocks personal attachments and generation', () => {
+    const agentBook = {
+      ...books[0],
+      agentId: 'agent-a',
+      embedded: true,
+      llmDeliveryPath: 'none' as const,
+    };
+    const { onToggle, onGenerate } = renderPanel({
+      files: [agentBook, books[1]],
+      canSearch: true,
+      busy: true,
+      details: { topic: 'Cells', grade: '9', duration: '40', date: '' },
+    });
+    const textbook = screen.getByRole('button', { name: /Grade 9 Biology/ });
+    const personal = screen.getByRole('button', { name: /Grade 10 English/ });
+    expect(textbook).toBeEnabled();
+    expect(personal).toBeDisabled();
+    fireEvent.click(textbook);
+    expect(textbook).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Create daily lesson plan' })).toBeDisabled();
+    fireEvent.click(personal);
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    expect(onToggle).toHaveBeenCalledWith(agentBook);
+    expect(onGenerate).not.toHaveBeenCalled();
+    fireEvent.click(textbook);
+    expect(textbook).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('blocks all book selections during route navigation', () => {
+    const { onToggle } = renderPanel({
+      files: [
+        { ...books[0], agentId: 'agent-a', embedded: true, llmDeliveryPath: 'none' },
+        books[1],
+      ],
+      canSearch: true,
+      selectionDisabled: true,
+    });
+    const textbook = screen.getByRole('button', { name: /Grade 9 Biology/ });
+    const personal = screen.getByRole('button', { name: /Grade 10 English/ });
+    expect(textbook).toBeDisabled();
+    expect(personal).toBeDisabled();
+    fireEvent.click(textbook);
+    fireEvent.click(personal);
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it('uses agent knowledge without requiring attachment support or uploading its content', () => {
+    renderPanel({
+      files: [{ ...books[0], agentId: 'agent-a', embedded: true, llmDeliveryPath: 'none' }],
+      selectedIds: new Set(['biology']),
+      canSearch: true,
+      canAttach: false,
+      details: { topic: 'Cells', grade: '9', duration: '40', date: '' },
+    });
+    expect(screen.getByRole('button', { name: /Grade 9 Biology/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Create daily lesson plan' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Upload textbook' })).not.toBeInTheDocument();
+    expect(screen.queryByText(translation.com_ui_textbooks_unsupported)).not.toBeInTheDocument();
+  });
+
+  it('requires File Search for an indexed textbook', () => {
+    renderPanel({ files: [{ ...books[0], embedded: true, llmDeliveryPath: 'none' }] });
+    expect(screen.getByRole('button', { name: /Grade 9 Biology/ })).toBeDisabled();
+    expect(
+      screen.getByText('Enable File Search for this agent to use indexed textbooks.'),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps own books visible when agent knowledge cannot load and offers retry', () => {
+    const { onRetry } = renderPanel({ knowledgeFailed: true });
+    expect(screen.getByRole('button', { name: /Grade 9 Biology/ })).toBeEnabled();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'This agent’s textbooks could not be loaded',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
   it('offers retry after a file-list error', () => {
     const { onRetry } = renderPanel({ failed: true });
     expect(screen.getByRole('alert')).toHaveTextContent('Textbooks could not be loaded');
@@ -163,13 +246,43 @@ describe('textbook panel', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('announces loading and shows an upload entry point for an empty library', () => {
-    const { unmount } = renderPanel({ loading: true });
+  it.each([{ failed: true }, { knowledgeFailed: true }])(
+    'does not claim the library is empty when loading failed: %p',
+    (failure) => {
+      renderPanel({ ...failure, files: [] });
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(screen.queryByText('No textbooks yet')).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(translation.com_ui_textbooks_empty_description),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('list', { name: 'Available textbooks' })).not.toBeInTheDocument();
+    },
+  );
+
+  it('shows no matching results when the successfully loaded books do not match the search', () => {
+    renderPanel({ search: 'Mathematics' });
+    expect(screen.getByText('No matching textbooks')).toBeInTheDocument();
+    expect(screen.queryByText('No textbooks yet')).not.toBeInTheDocument();
+  });
+
+  it('does not present a failed library request as a search without results', () => {
+    renderPanel({ knowledgeFailed: true, files: [], search: 'Mathematics' });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No matching textbooks')).not.toBeInTheDocument();
+  });
+
+  it('announces loading and directs an empty library to the agent File Search settings', () => {
+    const { unmount } = renderPanel({ loading: true, files: [] });
     expect(screen.getByText(translation.com_ui_loading)).toBeInTheDocument();
     unmount();
     renderPanel({ files: [] });
     expect(screen.getByText('No textbooks yet')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Upload textbook' })).toBeEnabled();
+    expect(
+      screen.getByText(
+        'Upload textbooks in the agent’s File Search settings, then select them here.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Upload textbook' })).not.toBeInTheDocument();
   });
 
   it('closes the panel using its labeled control', () => {

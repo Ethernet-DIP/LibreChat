@@ -8,18 +8,29 @@ import {
   OGDialogHeader,
   OGDialogTitle,
 } from '@librechat/client';
+import {
+  Permissions,
+  PermissionTypes,
+  isAgentsEndpoint,
+  isEphemeralAgentId,
+  isAssistantsEndpoint,
+  defaultAgentCapabilities,
+} from 'librechat-data-provider';
 import type { TFile } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
+import type { Textbook } from './model';
+import { useAgentCapabilities, useGetAgentsConfig } from '~/hooks/Agents';
+import { isIndexed, canUseTextbook, mergeTextbooks } from './model';
+import { useGetFiles, useGetAgentKnowledge } from '~/data-provider';
 import { useChatContext, useChatFormContext } from '~/Providers';
 import useSubmitMessage from '~/hooks/Messages/useSubmitMessage';
 import useAttachExisting from '~/hooks/Files/useAttachExisting';
-import useFileHandling from '~/hooks/Files/useFileHandling';
 import useAttachTarget from '~/hooks/Input/useAttachTarget';
 import useScaledMaxWidth from '~/hooks/useScaledMaxWidth';
-import { useGetFiles } from '~/data-provider';
+import useHasAccess from '~/hooks/Roles/useHasAccess';
+import { useAuthContext } from '~/hooks/AuthContext';
 import useLocalize from '~/hooks/useLocalize';
 import { hasIncompleteFiles } from '~/utils';
-import { isTextbook } from './model';
 import TextbookPanel from './Panel';
 import * as state from './state';
 
@@ -60,6 +71,7 @@ function Library({ disabled }: { disabled: boolean }) {
   const localize = useLocalize();
   const { isOverlay, open, setOpen } = useTextbookPanel();
   const chat = useChatContext();
+  const { user } = useAuthContext();
   const methods = useChatFormContext();
   const [search, setSearch] = useAtom(state.search);
   const [details, setDetails] = useAtom(state.details);
@@ -76,22 +88,74 @@ function Library({ disabled }: { disabled: boolean }) {
     endpointType,
     endpointFileConfig,
   });
-  const { handleFiles } = useFileHandling();
-  const query = useGetFiles<TFile[]>({ refetchOnMount: 'always' });
-  const books = useMemo(() => (query.data ?? []).filter(isTextbook), [query.data]);
-  const selectedIds = useMemo(
-    () => new Set(Array.from(chat.files.values(), (file) => file.file_id)),
-    [chat.files],
+  const { agentsConfig } = useGetAgentsConfig();
+  const { fileSearchEnabled } = useAgentCapabilities(
+    agentsConfig?.capabilities ?? defaultAgentCapabilities,
   );
+  const hasFileSearchAccess = useHasAccess({
+    permissionType: PermissionTypes.FILE_SEARCH,
+    permission: Permissions.USE,
+  });
+  const agentId =
+    isAgentsEndpoint(chat.conversation?.endpoint) &&
+    chat.conversation?.agent_id &&
+    !isEphemeralAgentId(chat.conversation.agent_id)
+      ? chat.conversation.agent_id
+      : undefined;
+  const knowledge = useGetAgentKnowledge(agentId, {
+    enabled: agentId != null,
+    refetchOnMount: 'always',
+  });
+  const [selectedKnowledge, setSelectedKnowledge] = useAtom(
+    state.selectedKnowledge(JSON.stringify([user?.id ?? '', agentId ?? ''])),
+  );
+  const query = useGetFiles<TFile[]>({ refetchOnMount: 'always' });
+  const books = useMemo(
+    () => mergeTextbooks(query.data ?? [], agentId ? (knowledge.data?.files ?? []) : [], agentId),
+    [query.data, knowledge.data?.files, agentId],
+  );
+  const canSearch =
+    agentId != null
+      ? knowledge.data?.enabled === true && !knowledge.isError
+      : hasFileSearchAccess &&
+        fileSearchEnabled &&
+        !isAssistantsEndpoint(chat.conversation?.endpoint);
+  const selectedIds = useMemo(() => {
+    const ids = new Set(Array.from(chat.files.values(), (file) => file.file_id));
+    const savedIds = new Set(Array.isArray(selectedKnowledge) ? selectedKnowledge : []);
+    for (const file of books) {
+      if (file.agentId != null && file.agentId === agentId) {
+        if (savedIds.has(file.file_id)) {
+          ids.add(file.file_id);
+        } else {
+          ids.delete(file.file_id);
+        }
+      }
+    }
+    return ids;
+  }, [chat.files, books, selectedKnowledge, agentId]);
   const busy = disabled || chat.isSubmitting || hasIncompleteFiles(chat.files);
 
-  const toggle = (file: TFile) => {
-    if (!canAttach || busy) {
+  const toggle = (file: Textbook) => {
+    if (disabled || !canUseTextbook(file, canAttach, canSearch) || (busy && file.agentId == null)) {
       return;
     }
     setError(null);
-    if (!selectedIds.has(file.file_id)) {
-      attachExisting(file);
+    const selected = selectedIds.has(file.file_id);
+    if (file.agentId != null) {
+      setSelectedKnowledge((current) => {
+        const ids = new Set(Array.isArray(current) ? current : []);
+        if (selected) {
+          ids.delete(file.file_id);
+        } else {
+          ids.add(file.file_id);
+        }
+        return [...ids];
+      });
+      return;
+    }
+    if (!selected && file.accountFile) {
+      attachExisting(file.accountFile);
       return;
     }
     chat.setFiles((current) => {
@@ -105,34 +169,14 @@ function Library({ disabled }: { disabled: boolean }) {
     });
   };
 
-  const upload = async (files: File[]) => {
-    if (!canAttach || busy || chat.filesLoading) {
-      return;
-    }
-    setError(null);
-    const documents = files.filter((file) => isTextbook({ filename: file.name, type: file.type }));
-    if (documents.length !== files.length) {
-      setError('upload');
-      return;
-    }
-    try {
-      const accepted = await handleFiles(documents);
-      if (!accepted) {
-        setError('upload');
-      }
-    } catch {
-      setError('upload');
-    }
-  };
-
   const generate = () => {
     const selected = books.filter((file) => selectedIds.has(file.file_id));
     const duration = Number(details.duration);
     if (
       busy ||
-      !canAttach ||
       chat.filesLoading ||
       selected.length === 0 ||
+      selected.some((file) => !canUseTextbook(file, canAttach, canSearch)) ||
       !details.topic.trim() ||
       !Number.isSafeInteger(duration) ||
       duration < 1
@@ -150,7 +194,14 @@ function Library({ disabled }: { disabled: boolean }) {
         methods.getValues('text')?.trim() || localize('com_ui_textbooks_no_instructions'),
       interpolation: { escapeValue: false },
     });
-    if (submitMessage({ text }) === false) {
+    const indexedIds = selected.filter(isIndexed).map((file) => file.file_id);
+    const fileSearchSelection =
+      agentId && indexedIds.length > 0 ? { agentId, fileIds: indexedIds } : undefined;
+    const requestText =
+      indexedIds.length > 0
+        ? `${localize('com_ui_textbooks_search_instruction')}\n\n${text}`
+        : text;
+    if (submitMessage({ text: requestText, fileSearchSelection }) === false) {
       setError('send');
       return;
     }
@@ -167,15 +218,23 @@ function Library({ disabled }: { disabled: boolean }) {
       failed={query.isError}
       uploading={chat.filesLoading}
       canAttach={canAttach}
+      canSearch={canSearch}
+      knowledgeLoading={agentId != null && knowledge.isLoading}
+      knowledgeFailed={agentId != null && knowledge.isError}
       busy={busy}
+      selectionDisabled={disabled}
       error={error}
       search={search}
       details={details}
       onSearch={setSearch}
       onDetails={setDetails}
-      onRetry={() => void query.refetch()}
+      onRetry={() => {
+        void query.refetch();
+        if (agentId != null) {
+          void knowledge.refetch();
+        }
+      }}
       onToggle={toggle}
-      onUpload={(files) => void upload(files)}
       onGenerate={generate}
       onClose={() => setOpen(false)}
     />
