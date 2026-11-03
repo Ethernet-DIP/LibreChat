@@ -25,6 +25,27 @@ const previewedResponse = {
 } as unknown as TMessage;
 
 describe('createPayload', () => {
+  it('sends an explicit textbook search selection as metadata without book contents', () => {
+    const fileSearchSelection = { agentId: 'agent_1', fileIds: ['book-b'] };
+    const submission = {
+      userMessage: {
+        messageId: 'user-1',
+        conversationId: 'convo-1',
+        parentMessageId: 'root',
+        isCreatedByUser: true,
+        text: 'Plan a lesson',
+        fileSearchSelection,
+      },
+      conversation: { conversationId: 'convo-1', endpoint: EModelEndpoint.agents },
+      endpointOption: { endpoint: EModelEndpoint.agents, agent_id: 'agent_1' },
+      messages: [],
+      isTemporary: false,
+    } satisfies TSubmission;
+    const { payload } = createPayload(submission);
+    expect(payload.fileSearchSelection).toEqual(fileSearchSelection);
+    expect(payload.files).toBeUndefined();
+  });
+
   it.each([
     ['regenerate', { isRegenerate: true }],
     ['continue', { isEdited: true, isContinued: true }],

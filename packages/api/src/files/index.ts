@@ -26,6 +26,7 @@ export * from './upload/fallback';
 export * from './rag';
 export * from './rag/context';
 export * from './rag/search';
+export * from './rag/selection';
 export * from './regexEngine';
 export * from './retention';
 export * from './speech';

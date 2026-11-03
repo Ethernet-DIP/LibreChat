@@ -67,6 +67,37 @@ const input = (overrides: Partial<BuildTurnInput> = {}): BuildTurnInput => ({
 });
 
 describe('buildTurn', () => {
+  it('carries selected textbook IDs without attaching or reading the books', () => {
+    const fileSearchSelection = { agentId: 'agent-1', fileIds: ['book-b'] };
+    const turn = buildTurn(input({ params: { text: 'Plan a lesson', fileSearchSelection } }));
+    expect(turn.submission.userMessage.fileSearchSelection).toEqual(fileSearchSelection);
+    expect(turn.submission.userMessage.files).toBeUndefined();
+  });
+
+  it('replays the original book selection during regeneration', () => {
+    const fileSearchSelection = { agentId: 'agent-1', fileIds: ['book-a'] };
+    const turn = buildTurn(
+      input({
+        params: { text: user.text, messageId: user.messageId },
+        options: { isRegenerate: true },
+        cachedMessages: [{ ...user, fileSearchSelection }, response],
+      }),
+    );
+    expect(turn.submission.userMessage.fileSearchSelection).toEqual(fileSearchSelection);
+  });
+
+  it('does not inherit a prior lesson selection on an ordinary new message', () => {
+    const turn = buildTurn(
+      input({
+        cachedMessages: [
+          { ...user, fileSearchSelection: { agentId: 'agent-1', fileIds: ['book-a'] } },
+          response,
+        ],
+      }),
+    );
+    expect(turn.submission.userMessage.fileSearchSelection).toBeUndefined();
+  });
+
   it('appends a user message and a response placeholder to the branch tail', () => {
     const turn = buildTurn(input());
 

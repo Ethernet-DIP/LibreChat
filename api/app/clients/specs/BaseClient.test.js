@@ -3753,6 +3753,46 @@ describe('BaseClient', () => {
       });
     });
 
+    test.each([[['book-a', 'book-b']], [[]]])(
+      'persists selected textbook IDs %j before start callbacks and user-message storage',
+      async (fileIds) => {
+        const fileSearchSelection = { agentId: 'lesson-agent', fileIds };
+        TestClient.options.req = { body: { fileSearchSelection } };
+        TestClient.saveMessageToDatabase = jest.fn().mockResolvedValue({ message: {} });
+        const onStart = jest.fn();
+        let captured;
+
+        await TestClient.sendMessage('Create a lesson plan.', {
+          onStart,
+          getReqData: ({ userMessage: message }) => {
+            if (message) captured = message.fileSearchSelection;
+          },
+        });
+
+        expect(captured).toEqual(fileSearchSelection);
+        expect(captured.fileIds).not.toBe(fileIds);
+        expect(onStart.mock.calls[0][0].fileSearchSelection).toEqual(fileSearchSelection);
+        const [savedUser] = TestClient.saveMessageToDatabase.mock.calls.find(
+          ([message]) => message.isCreatedByUser === true,
+        );
+        expect(savedUser.fileSearchSelection).toEqual(fileSearchSelection);
+      },
+    );
+
+    test('omits malformed selected textbook IDs from user-message storage', async () => {
+      TestClient.options.req = {
+        body: { fileSearchSelection: { agentId: 'lesson-agent', fileIds: ['book-a', 1] } },
+      };
+      TestClient.saveMessageToDatabase = jest.fn().mockResolvedValue({ message: {} });
+
+      await TestClient.sendMessage('Create a lesson plan.');
+
+      const [savedUser] = TestClient.saveMessageToDatabase.mock.calls.find(
+        ([message]) => message.isCreatedByUser === true,
+      );
+      expect(savedUser).not.toHaveProperty('fileSearchSelection');
+    });
+
     test('drops an invalid request-scoped reasoning override from message metadata', async () => {
       TestClient.options.req = {
         body: { reasoningOverride: { key: 'model', value: 'secret-model' } },

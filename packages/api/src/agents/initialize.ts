@@ -135,6 +135,7 @@ import { registerMemoryTools, memoryToolUsageGuard } from './memory';
 import { isImplicitStatefulCodeRouteAvailable } from '~/code/config';
 import { applyIntentLabels, sanitizeIntentLabels } from './intent';
 import { prepareQueuedCodeFileContext } from '~/files/code/queued';
+import { getSelectedFileSearchIds } from '../files/rag/selection';
 import { ContentFilterError } from '../middleware/contentFilter';
 import { resolveToolRoleGrants } from '~/tools/rolePermissions';
 import { createRequestAgentExecutionContext } from './runtime';
@@ -2075,6 +2076,23 @@ export async function initializeAgent(
   }
 
   let runtimeToolResources = agent.tool_resources;
+  const selectedSearchIds = getSelectedFileSearchIds(requestBody.fileSearchSelection, agent.id);
+  const searchResource = runtimeToolResources?.[EToolResources.file_search];
+  if (selectedSearchIds !== undefined && searchResource != null) {
+    const selectedIds = new Set(selectedSearchIds);
+    runtimeToolResources = {
+      ...runtimeToolResources,
+      [EToolResources.file_search]: {
+        ...searchResource,
+        ...(searchResource.file_ids && {
+          file_ids: searchResource.file_ids.filter((id) => selectedIds.has(id)),
+        }),
+        ...(searchResource.files && {
+          files: searchResource.files.filter((file) => selectedIds.has(file.file_id)),
+        }),
+      },
+    };
+  }
   if (attachedEnvironmentOptOut && runtimeToolResources != null) {
     runtimeToolResources = { ...runtimeToolResources };
     delete runtimeToolResources[EToolResources.execute_code];

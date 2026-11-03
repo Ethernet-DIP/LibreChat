@@ -14,6 +14,7 @@ export type TAskProps = {
   conversationId?: string | null;
   messageId?: string | null;
   clientTimestamp?: string;
+  fileSearchSelection?: TMessage['fileSearchSelection'];
 };
 
 /** How an `ask` call submits its turn: an edit, a regenerate, a continue or a compaction. */

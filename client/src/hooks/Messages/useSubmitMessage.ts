@@ -21,6 +21,7 @@ export default function useSubmitMessage() {
   const submitMessage = useCallback(
     (data?: {
       text: string;
+      fileSearchSelection?: TMessage['fileSearchSelection'];
       overrideFiles?: TMessage['files'];
       overrideQuotes?: string[];
       overrideManualSkills?: string[];
@@ -45,6 +46,7 @@ export default function useSubmitMessage() {
       const submitted = ask(
         {
           text: data.text,
+          fileSearchSelection: data.fileSearchSelection,
           ...(data.overrideRecoverySteerId != null && {
             overrideUserMessageId: data.overrideRecoverySteerId,
           }),

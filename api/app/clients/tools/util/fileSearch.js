@@ -6,6 +6,7 @@ const {
   selectFileCitationSources,
   generateShortLivedToken,
   executeFileSearchQuery,
+  selectFileSearchFiles,
 } = require('@librechat/api');
 const { Tools, EToolResources } = require('librechat-data-provider');
 const { filterFilesByAgentAccess } = require('~/server/services/Files/permissions');
@@ -58,7 +59,11 @@ const primeFiles = async (options) => {
     dbFiles = allFiles;
   }
 
-  dbFiles = dbFiles.concat(resourceFiles);
+  dbFiles = selectFileSearchFiles(
+    dbFiles.concat(resourceFiles),
+    req?.body?.fileSearchSelection,
+    agentId,
+  );
 
   let toolContext = `- Note: Semantic search is available through the ${Tools.file_search} tool but no files are currently loaded. Request the user to upload documents to search through.`;
 

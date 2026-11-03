@@ -8177,6 +8177,7 @@ class GenerationJobManagerClass {
         conversationId: message.conversationId,
         text: message.text,
         quotes: message.quotes,
+        fileSearchSelection: message.fileSearchSelection,
         privacyRevision: message.privacyRevision,
         // Persist the turn's uploaded files so a HITL resume sources them from the job
         // (this authoritative writer), not a user DB row whose save can still be racing

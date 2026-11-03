@@ -42,6 +42,7 @@ const {
   toPendingSteer,
   createMCPRuntimeRequestBody,
   getSafeErrorMetadata,
+  persistedFileSearchSelectionFields,
   isAgentEventRetentionActive,
   resumeAgentEventActor,
   settleAgentEventActorHistoryTurn,
@@ -1071,6 +1072,11 @@ const ResumeAgentController = async (req, res, next, initializeClient, addTitle)
   // retryable, with no resource initialization or externally visible side
   // effect beyond owner-scoped reads.
   req.body.parentMessageId = job.metadata.userMessage?.parentMessageId ?? Constants.NO_PARENT;
+  delete req.body.fileSearchSelection;
+  Object.assign(
+    req.body,
+    persistedFileSearchSelectionFields(job.metadata.userMessage?.fileSearchSelection),
+  );
   // Rebuild the same persistence/retention mode as the paused turn. The resume body
   // is not authoritative: tools inspect this field during client initialization.
   req.body.isTemporary = job.metadata.isTemporary === true;

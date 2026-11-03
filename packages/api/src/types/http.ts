@@ -5,6 +5,7 @@ import type {
   TFile,
   TEndpointOption,
   TReasoningOverride,
+  TFileSearchSelection,
   Agents,
 } from 'librechat-data-provider';
 import type { IUser, AppConfig, IConversation } from '@librechat/data-schemas';
@@ -28,6 +29,7 @@ export type RequestBody = {
   chatProjectId?: string | null;
   endpointOption?: Partial<TEndpointOption>;
   reasoningOverride?: TReasoningOverride;
+  fileSearchSelection?: TFileSearchSelection;
   /** Browser IANA timezone used to resolve local-time prompt variables (e.g. `{{current_datetime}}`). */
   timezone?: string;
   codeApprovalMode?: CodeApprovalMode;
