@@ -39,6 +39,7 @@ const {
   rejectPrivateTextAdmission,
   bindPrivateTextPersistenceAbort,
   persistedReasoningOverrideFields,
+  persistedFileSearchSelectionFields,
   isTemporaryTurn,
 } = require('@librechat/api');
 const {
@@ -618,6 +619,7 @@ class BaseClient {
 
     Object.assign(
       userMessage,
+      persistedFileSearchSelectionFields(this.options.req?.body?.fileSearchSelection),
       persistedReasoningOverrideFields({
         rawReasoningOverride: this.options.req?.body?.reasoningOverride,
         isEdited: opts.isEdited,

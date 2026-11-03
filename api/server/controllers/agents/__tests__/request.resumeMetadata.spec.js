@@ -288,6 +288,8 @@ jest.mock('@librechat/api', () => ({
   announceErrorTurn: jest.requireActual('@librechat/api').announceErrorTurn,
   persistedReasoningOverrideFields:
     jest.requireActual('@librechat/api').persistedReasoningOverrideFields,
+  persistedFileSearchSelectionFields:
+    jest.requireActual('@librechat/api').persistedFileSearchSelectionFields,
   logAgentMemorySnapshot: jest.fn(),
   isScheduleFireRequest: (...args) => mockIsScheduleFireRequest(...args),
   exemptFromConcurrencyLimiter: (...args) => mockExemptFromConcurrencyLimiter(...args),
@@ -1519,6 +1521,61 @@ describe('ResumableAgentController resume metadata', () => {
     expect(jobOptions.initialMetadata.userMessage.messageId).toBe(requestBody.parentMessageId);
     expect(jobOptions.initialMetadata.mcpRequestBody).toBe(requestBody);
     expect(requestBody.messageId).not.toBe(req.body.messageId);
+  });
+
+  it.each([[['book-a', 'book-b']], [[]]])(
+    'captures selected textbook IDs %j in preliminary metadata before initialization',
+    async (fileIds) => {
+      const fileSearchSelection = { agentId: 'lesson-agent', fileIds };
+      const initializeClient = jest.fn().mockRejectedValue(new Error('stop after metadata'));
+      const req = {
+        user: { id: 'user-123' },
+        body: {
+          text: 'Create a lesson plan from the selected textbooks.',
+          messageId: 'user-message',
+          conversationId: 'conversation-123',
+          fileSearchSelection,
+          endpointOption: { endpoint: 'agents', agent_id: 'lesson-agent' },
+        },
+        config: {},
+      };
+
+      await AgentController(req, createResumableResponse(), jest.fn(), initializeClient, null);
+
+      const preliminary =
+        mockGenerationJobManager.createJob.mock.calls[0][3].initialMetadata.userMessage;
+      expect(preliminary.fileSearchSelection).toEqual(fileSearchSelection);
+      expect(preliminary.fileSearchSelection.fileIds).not.toBe(fileIds);
+      expect(mockGenerationJobManager.createJob.mock.invocationCallOrder[0]).toBeLessThan(
+        initializeClient.mock.invocationCallOrder[0],
+      );
+    },
+  );
+
+  it('leaves malformed textbook selection out of preliminary metadata', async () => {
+    const req = {
+      user: { id: 'user-123' },
+      body: {
+        text: 'Create a lesson plan.',
+        messageId: 'user-message',
+        conversationId: 'conversation-123',
+        fileSearchSelection: { agentId: 'lesson-agent', fileIds: ['book-a', 1] },
+        endpointOption: { endpoint: 'agents', agent_id: 'lesson-agent' },
+      },
+      config: {},
+    };
+
+    await AgentController(
+      req,
+      createResumableResponse(),
+      jest.fn(),
+      jest.fn().mockRejectedValue(new Error('stop after metadata')),
+      null,
+    );
+
+    const preliminary =
+      mockGenerationJobManager.createJob.mock.calls[0][3].initialMetadata.userMessage;
+    expect(preliminary).not.toHaveProperty('fileSearchSelection');
   });
 
   it('pins a normalized code-environment decision before provider execution', async () => {
@@ -3754,6 +3811,7 @@ describe('ResumableAgentController resume metadata', () => {
   });
 
   it('persists a paused response as unfinished before releasing its Stop/resume barrier', async () => {
+    const fileSearchSelection = { agentId: 'lesson-agent', fileIds: ['book-a'] };
     const userMessage = {
       messageId: 'user-msg',
       parentMessageId: 'parent-msg',
@@ -3813,6 +3871,7 @@ describe('ResumableAgentController resume metadata', () => {
         messageId: userMessage.messageId,
         parentMessageId: userMessage.parentMessageId,
         conversationId: 'conversation-123',
+        fileSearchSelection,
         endpointOption: { endpoint: 'agents', modelOptions: { model: 'gpt-4.1' } },
       },
       config: {},
@@ -3827,6 +3886,16 @@ describe('ResumableAgentController resume metadata', () => {
     );
     await pauseSaveStarted;
 
+    const initialMetadata = mockGenerationJobManager.createJob.mock.calls[0][3].initialMetadata;
+    expect(initialMetadata.userMessage.fileSearchSelection).toEqual(fileSearchSelection);
+    expect(mockGenerationJobManager.updateMetadata).toHaveBeenCalledWith(
+      'conversation-123',
+      expect.objectContaining({
+        responseMessageId: response.messageId,
+        userMessage: expect.objectContaining({ fileSearchSelection }),
+      }),
+      1000,
+    );
     expect(observedHookResult).toBe(false);
     expect(completedResponseWrite).not.toHaveBeenCalled();
     expect(client.saveMessageToDatabase).toHaveBeenCalledWith(
@@ -4893,6 +4962,7 @@ describe('ResumableAgentController resume metadata', () => {
   });
 
   it('finalizes and disposes a client aborted during initialization before releasing the slot', async () => {
+    const fileSearchSelection = { agentId: 'lesson-agent', fileIds: ['book-b'] };
     const abortController = new AbortController();
     let resolveCompletion;
     let signalCompletionStarted;
@@ -4924,6 +4994,7 @@ describe('ResumableAgentController resume metadata', () => {
         text: 'Stop during initialization.',
         messageId: 'user-msg',
         conversationId,
+        fileSearchSelection,
         endpointOption: { endpoint: 'agents', modelOptions: { model: 'gpt-4.1' } },
       },
       config: {},
@@ -4933,6 +5004,10 @@ describe('ResumableAgentController resume metadata', () => {
     const controllerPromise = AgentController(req, res, jest.fn(), initializeClient, null);
     await completionStarted;
 
+    expect(
+      mockGenerationJobManager.createJob.mock.calls[0][3].initialMetadata.userMessage
+        .fileSearchSelection,
+    ).toEqual(fileSearchSelection);
     expect(mockGenerationJobManager.completeJob).toHaveBeenCalledWith(
       conversationId,
       'Request aborted during initialization',

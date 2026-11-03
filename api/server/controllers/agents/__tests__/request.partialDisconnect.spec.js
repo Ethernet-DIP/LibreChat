@@ -70,6 +70,8 @@ jest.mock('@librechat/api', () => ({
   sendEvent: jest.fn(),
   persistedReasoningOverrideFields:
     jest.requireActual('@librechat/api').persistedReasoningOverrideFields,
+  persistedFileSearchSelectionFields:
+    jest.requireActual('@librechat/api').persistedFileSearchSelectionFields,
   isScheduleFireRequest: jest.fn(() => false),
   exemptFromConcurrencyLimiter: jest.fn(() => false),
   toPendingSteer: jest.fn((item) => item),
@@ -276,6 +278,20 @@ describe('ResumableAgentController tenant context', () => {
       }),
       expect.any(Object),
     );
+  });
+
+  it('keeps selected textbook IDs in the job when a connection closes during initialization', async () => {
+    const fileSearchSelection = { agentId: 'lesson-agent', fileIds: ['book-a'] };
+    await firePartialDisconnect(
+      { id: 'user-123', tenantId: 'tenant-a' },
+      { createdAt: 1000, contextMeta: partialContextMeta },
+      { body: { fileSearchSelection } },
+    );
+
+    const preliminary =
+      mockGenerationJobManager.createJob.mock.calls[0][3].initialMetadata.userMessage;
+    expect(preliminary.fileSearchSelection).toEqual(fileSearchSelection);
+    expect(preliminary.fileSearchSelection.fileIds).not.toBe(fileSearchSelection.fileIds);
   });
 
   it('leaves context meta off the partial response when the job record belongs to another epoch', async () => {

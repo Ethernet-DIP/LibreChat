@@ -81,6 +81,29 @@ export const useGetFileConfig = <TData = t.TFileConfig>(
   );
 };
 
+export const useGetAgentKnowledge = (
+  agentId: string | undefined,
+  config?: UseQueryOptions<t.TAgentKnowledgeResponse>,
+): QueryObserverResult<t.TAgentKnowledgeResponse> => {
+  const queriesEnabled = useRecoilValue<boolean>(store.queriesEnabled);
+  return useQuery<t.TAgentKnowledgeResponse>(
+    DynamicQueryKeys.agentKnowledge(agentId ?? ''),
+    () =>
+      agentId
+        ? dataService.getAgentKnowledge(agentId)
+        : Promise.resolve({ enabled: false, files: [] }),
+    {
+      staleTime: 5000,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      refetchOnMount: true,
+      ...config,
+      enabled:
+        (config?.enabled ?? true) && queriesEnabled && !!agentId && !isEphemeralAgent(agentId),
+    },
+  );
+};
+
 type FileDownloadOptions = {
   source?: string | null;
   direct?: boolean;

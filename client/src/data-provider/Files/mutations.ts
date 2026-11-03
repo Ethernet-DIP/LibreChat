@@ -5,6 +5,7 @@ import {
   QueryKeys,
   dataService,
   MutationKeys,
+  DynamicQueryKeys,
   defaultOrderQuery,
   isAssistantsEndpoint,
 } from 'librechat-data-provider';
@@ -101,6 +102,15 @@ export const useUploadFileMutation = (
             ...update,
           };
         });
+        if (tool_resource === EToolResources.file_search) {
+          /** The upload handler refetches active agent queries; disabled textbook lists must
+           * also become stale so reopening them cannot reuse the previous list. */
+          void queryClient.invalidateQueries({
+            queryKey: DynamicQueryKeys.agentKnowledge(agent_id),
+            exact: true,
+            refetchType: 'none',
+          });
+        }
       }
 
       if (!assistant_id) {
@@ -227,6 +237,13 @@ export const useDeleteFilesMutation = (
 
       onSuccess?.(data, vars, context);
       if (vars.agent_id != null && vars.agent_id) {
+        if (vars.tool_resource === EToolResources.file_search) {
+          void queryClient.invalidateQueries({
+            queryKey: DynamicQueryKeys.agentKnowledge(vars.agent_id),
+            exact: true,
+            refetchType: 'none',
+          });
+        }
         queryClient.refetchQueries([QueryKeys.agent, vars.agent_id]);
       }
     },

@@ -6,6 +6,7 @@ const {
   getSafeErrorMetadata,
   getApprovalTtlMs,
   handleFileListRequest,
+  handleAgentKnowledgeRequest,
   refreshS3FileUrls,
   handleFilesUsageRequest,
   buildDeleteFilesResponse,
@@ -92,6 +93,25 @@ router.get('/', async (req, res) => {
     logger.error('[/files] Error getting files:', error);
     res.status(400).json({ message: 'Error in request', error: error.message });
   }
+});
+
+/** Lists VIEW-authorized searchable metadata without exposing stored upload records. */
+router.get('/agent/:agent_id/knowledge', async (req, res) => {
+  const result = await handleAgentKnowledgeRequest(
+    {
+      agentId: req.params.agent_id,
+      user: req.user,
+      capabilities: req.config?.endpoints?.agents?.capabilities,
+    },
+    {
+      getAgent: db.getAgent,
+      getFiles: db.getFiles,
+      getRoleByName,
+      checkPermission,
+      logger,
+    },
+  );
+  return res.status(result.status).json(result.body);
 });
 
 /**

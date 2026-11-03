@@ -261,6 +261,10 @@ export function buildTurn({
      */
     quotes: quotes.length > 0 ? quotes : undefined,
     reasoningOverride,
+    fileSearchSelection: compact
+      ? undefined
+      : (params.fileSearchSelection ??
+        (isRegenerate || isEdited ? targetParentMessage?.fileSearchSelection : undefined)),
   };
 
   /** The leaf's files already sit in history; a compaction re-attaches nothing. */

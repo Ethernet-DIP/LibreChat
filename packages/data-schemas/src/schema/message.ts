@@ -266,6 +266,14 @@ const messageSchema: Schema<IMessage> = new Schema(
      * request body, not on the message itself.
      */
     manualSkills: { type: [String], default: undefined },
+    fileSearchSelection: {
+      type: {
+        agentId: { type: String, required: true },
+        fileIds: { type: [String], required: true },
+      },
+      _id: false,
+      default: undefined,
+    },
     /**
      * Skill names auto-primed on this turn because their frontmatter declares
      * `always-apply: true`. Persisted at turn time (not reconstructed on

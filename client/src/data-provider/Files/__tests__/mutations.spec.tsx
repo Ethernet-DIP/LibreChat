@@ -1,12 +1,12 @@
 import React from 'react';
 import { RecoilRoot } from 'recoil';
-import { QueryKeys } from 'librechat-data-provider';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryKeys, FileSources, EToolResources, DynamicQueryKeys } from 'librechat-data-provider';
 import type { TFile, BatchFile } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
 import { useUploadFileMutation, useDeleteFilesMutation } from '../mutations';
-import { useGetRecentFiles } from '../queries';
+import { useGetRecentFiles, useGetAgentKnowledge } from '../queries';
 
 /**
  * The composer palette reads its "your files" section from
@@ -18,6 +18,7 @@ import { useGetRecentFiles } from '../queries';
 const mockGetFiles = jest.fn();
 const mockUploadFile = jest.fn();
 const mockDeleteFiles = jest.fn();
+const mockGetAgentKnowledge = jest.fn();
 
 jest.mock('librechat-data-provider', () => {
   const actual = jest.requireActual('librechat-data-provider');
@@ -28,6 +29,7 @@ jest.mock('librechat-data-provider', () => {
       getFiles: (...args: unknown[]) => mockGetFiles(...args),
       uploadFile: (...args: unknown[]) => mockUploadFile(...args),
       deleteFiles: (...args: unknown[]) => mockDeleteFiles(...args),
+      getAgentKnowledge: (...args: unknown[]) => mockGetAgentKnowledge(...args),
     },
   };
 });
@@ -185,5 +187,121 @@ describe('recent-files cache after file mutations', () => {
 
     await waitFor(() => expect(result.current.recent.data).toEqual([]));
     expect(mockGetFiles).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('agent textbook cache after File Search mutations', () => {
+  const agentId = 'agent_a';
+  const otherAgentId = 'agent_b';
+  const previous = { enabled: true, files: [makeFile()] };
+  const renderKnowledge = (queryClient: QueryClient) =>
+    renderHook(
+      ({ enabled }: { enabled: boolean }) => ({
+        knowledge: useGetAgentKnowledge(agentId, { enabled, staleTime: Infinity }),
+        upload: useUploadFileMutation(),
+        remove: useDeleteFilesMutation(),
+      }),
+      { wrapper: wrapperFor(queryClient), initialProps: { enabled: true } },
+    );
+  const fileSearchForm = () => {
+    const body = uploadForm();
+    body.set('agent_id', agentId);
+    body.set('tool_resource', EToolResources.file_search);
+    return body;
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetAgentKnowledge.mockResolvedValue(previous);
+    mockUploadFile.mockResolvedValue(makeFile({ file_id: 'file-new' }));
+    mockDeleteFiles.mockResolvedValue({ message: 'deleted' });
+  });
+
+  it('reloads books uploaded while the list is disabled without invalidating another agent', async () => {
+    const queryClient = createClient();
+    queryClient.setQueryData(DynamicQueryKeys.agentKnowledge(otherAgentId), previous);
+    const { result, rerender } = renderKnowledge(queryClient);
+    await waitFor(() => expect(result.current.knowledge.data).toEqual(previous));
+    rerender({ enabled: false });
+    const updated = { enabled: true, files: [makeFile(), makeFile({ file_id: 'file-new' })] };
+    mockGetAgentKnowledge.mockResolvedValue(updated);
+
+    await act(async () => {
+      await result.current.upload.mutateAsync(fileSearchForm());
+    });
+
+    expect(mockGetAgentKnowledge).toHaveBeenCalledTimes(1);
+    expect(queryClient.getQueryState(DynamicQueryKeys.agentKnowledge(agentId))?.isInvalidated).toBe(
+      true,
+    );
+    expect(
+      queryClient.getQueryState(DynamicQueryKeys.agentKnowledge(otherAgentId))?.isInvalidated,
+    ).toBe(false);
+    rerender({ enabled: true });
+    await waitFor(() => expect(result.current.knowledge.data).toEqual(updated));
+  });
+
+  it('reloads books removed while the list is disabled', async () => {
+    const queryClient = createClient();
+    const { result, rerender } = renderKnowledge(queryClient);
+    await waitFor(() => expect(result.current.knowledge.data).toEqual(previous));
+    rerender({ enabled: false });
+    const updated = { enabled: true, files: [] };
+    mockGetAgentKnowledge.mockResolvedValue(updated);
+
+    await act(async () => {
+      await result.current.remove.mutateAsync({
+        files: [
+          {
+            file_id: 'file-old',
+            filepath: '/files/old.pdf',
+            embedded: true,
+            source: FileSources.vectordb,
+          },
+        ],
+        agent_id: agentId,
+        tool_resource: EToolResources.file_search,
+      });
+    });
+
+    expect(mockGetAgentKnowledge).toHaveBeenCalledTimes(1);
+    rerender({ enabled: true });
+    await waitFor(() => expect(result.current.knowledge.data).toEqual(updated));
+  });
+
+  it('keeps the open list current after a book is removed', async () => {
+    const queryClient = createClient();
+    const { result } = renderKnowledge(queryClient);
+    await waitFor(() => expect(result.current.knowledge.data).toEqual(previous));
+    const updated = { enabled: true, files: [] };
+    mockGetAgentKnowledge.mockResolvedValue(updated);
+
+    await act(async () => {
+      await result.current.remove.mutateAsync({
+        files: [],
+        agent_id: agentId,
+        tool_resource: EToolResources.file_search,
+      });
+    });
+
+    await waitFor(() => expect(result.current.knowledge.data).toEqual(updated));
+    expect(mockGetAgentKnowledge).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not invalidate agent books for an attachment to a conversation', async () => {
+    const queryClient = createClient();
+    const { result, rerender } = renderKnowledge(queryClient);
+    await waitFor(() => expect(result.current.knowledge.data).toEqual(previous));
+    rerender({ enabled: false });
+    const body = fileSearchForm();
+    body.set('message_file', 'true');
+
+    await act(async () => {
+      await result.current.upload.mutateAsync(body);
+    });
+
+    expect(queryClient.getQueryState(DynamicQueryKeys.agentKnowledge(agentId))?.isInvalidated).toBe(
+      false,
+    );
   });
 });

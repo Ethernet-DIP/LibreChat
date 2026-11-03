@@ -3170,6 +3170,8 @@ export const interfaceSchema = z
       ])
       .optional(),
     temporaryChat: z.boolean().optional(),
+    /** Textbook library and daily lesson planning beside the conversation. */
+    textbooks: z.boolean().optional(),
     temporaryChatRetention: z.number().min(1).max(8760).optional(),
     generalChatRetention: z.number().min(1).max(8760).optional(),
     autoSubmitFromUrl: z.boolean().optional(),
@@ -3418,6 +3420,7 @@ export const interfaceSchema = z
       public: false,
     },
     temporaryChat: true,
+    textbooks: false,
     autoSubmitFromUrl: true,
     colorModeFromUrl: false,
     runCode: true,

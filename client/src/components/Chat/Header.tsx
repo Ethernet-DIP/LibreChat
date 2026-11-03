@@ -11,6 +11,7 @@ import {
 } from 'librechat-data-provider';
 import { OpenSidebar, PresetsMenu, NewChat, HeaderMenu } from './Menus';
 import { TemporaryChat, TemporaryChatIndicator } from './TemporaryChat';
+import { TextbookButton } from '~/components/Textbooks/Workspace';
 import useDrawerViewport from '~/hooks/Nav/useDrawerViewport';
 import ModelSelector from './Menus/Endpoints/ModelSelector';
 import { BackgroundTasksButton } from './BackgroundTasks';
@@ -50,7 +51,7 @@ function Header({
   const isNewChat = routeConversationId == null || routeConversationId === Constants.NEW_CONVO;
   /** The context conversation can still be the previous chat for a render, so it counts only
    *  once it is the routed one. Only a code conversation can have a pull request. */
-  const { conversation } = useChatContext();
+  const { conversation, index } = useChatContext();
   const showPullRequest =
     !isNewChat &&
     parentConversationId == null &&
@@ -132,6 +133,7 @@ function Header({
       </div>
 
       <div className={cn('flex shrink-0 items-center gap-2', hiddenBehindNav)}>
+        {!readOnly && index === 0 && interfaceConfig.textbooks === true && <TextbookButton />}
         {showTemporaryChat && <TemporaryChatIndicator />}
         {!isNewChat && <NewChat className={isSmallScreen ? undefined : 'hidden'} />}
         {!isNewChat && parentConversationId == null && (

@@ -10,6 +10,7 @@ const {
 const {
   toPendingSteer,
   persistedReasoningOverrideFields,
+  persistedFileSearchSelectionFields,
   getViolationInfo,
   applyForcedTemporaryRequest,
   resolveResumableRetention,
@@ -259,6 +260,7 @@ function getPreliminaryUserMessage(
     manualSkills,
     alwaysAppliedSkills,
     reasoningOverride,
+    fileSearchSelection,
   },
   conversationId,
   subagentTriggerProjection,
@@ -281,6 +283,7 @@ function getPreliminaryUserMessage(
     conversationId,
     text,
     ...(referencedQuotes != null && { quotes: referencedQuotes }),
+    ...persistedFileSearchSelectionFields(fileSearchSelection),
     // Persist the turn's uploaded files on this AWAITED preliminary write so they land on
     // job.metadata.userMessage BEFORE the run can reach its first interrupt. onStart's
     // later writes are fire-and-forget, so a fast approval could otherwise read the job
@@ -2413,6 +2416,7 @@ const ResumableAgentController = async (req, res, next, initializeClient, addTit
                 quotes: userMsg.quotes,
                 privacyRevision: userMsg.privacyRevision,
                 reasoningOverride: userMsg.reasoningOverride,
+                ...persistedFileSearchSelectionFields(req.body?.fileSearchSelection),
                 // Persist the turn's uploaded files here (authoritative job metadata) so a
                 // HITL resume sources them from the job, not the user DB row — which the
                 // approval prompt can race (the row save may still be in flight when a fast

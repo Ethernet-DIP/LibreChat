@@ -393,6 +393,14 @@ export const reasoningOverrideSchema = z.discriminatedUnion('key', [
 
 export type TReasoningOverride = z.infer<typeof reasoningOverrideSchema>;
 
+/** File Search scope for a single turn, narrowed against the agent's authorized files. */
+export const fileSearchSelectionSchema = z.object({
+  agentId: z.string().min(1),
+  fileIds: z.array(z.string().min(1)),
+});
+
+export type TFileSearchSelection = z.infer<typeof fileSearchSelectionSchema>;
+
 export const defaultAssistantFormValues = {
   assistant: '',
   id: '',
@@ -1017,6 +1025,7 @@ export const tMessageSchema = z.object({
    * content parts on the assistant message instead).
    */
   manualSkills: z.array(z.string()).optional(),
+  fileSearchSelection: fileSearchSelectionSchema.optional(),
   /**
    * Skill names auto-primed on this turn because their `always-apply`
    * frontmatter flag is set. Persisted at turn time so the pinned-variant

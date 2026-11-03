@@ -3,13 +3,14 @@ const { ResourceType } = require('librechat-data-provider');
 
 jest.mock('axios');
 jest.mock('@librechat/api', () => {
-  const { selectFileCitationSources, executeFileSearchQuery } =
+  const { selectFileCitationSources, executeFileSearchQuery, selectFileSearchFiles } =
     jest.requireActual('@librechat/api');
   return {
     generateShortLivedToken: jest.fn(),
     logAxiosError: jest.fn(),
     selectFileCitationSources,
     executeFileSearchQuery,
+    selectFileSearchFiles,
   };
 });
 
@@ -33,6 +34,11 @@ const { createFileSearchTool, primeFiles } = require('~/app/clients/tools/util/f
 const { generateShortLivedToken } = require('@librechat/api');
 
 describe('fileSearch.js - agent file authorization', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.RAG_API_URL = 'http://localhost:8000';
+  });
+
   it('uses the permission resource type established by the calling route', async () => {
     const { getFiles } = require('~/models');
     const { filterFilesByAgentAccess } = require('~/server/services/Files/permissions');
@@ -53,6 +59,63 @@ describe('fileSearch.js - agent file authorization', () => {
       agentId: 'agent-123',
       resourceType: ResourceType.REMOTE_AGENT,
     });
+  });
+
+  it('searches only selected authorized agent knowledge while reusing its existing namespace', async () => {
+    const { getFiles } = require('~/models');
+    const { filterFilesByAgentAccess } = require('~/server/services/Files/permissions');
+    const files = [
+      { file_id: 'book-a', filename: 'A.pdf', user: 'owner' },
+      { file_id: 'book-b', filename: 'B.pdf', user: 'owner' },
+      { file_id: 'private-book', filename: 'Private.pdf', user: 'other' },
+    ];
+    getFiles.mockResolvedValueOnce(files);
+    filterFilesByAgentAccess.mockResolvedValueOnce(files.slice(0, 2));
+    const primed = await primeFiles({
+      req: {
+        user: { id: 'viewer', role: 'USER' },
+        body: {
+          fileSearchSelection: { agentId: 'lesson-agent', fileIds: ['book-b', 'private-book'] },
+        },
+      },
+      agentId: 'lesson-agent',
+      tool_resources: { file_search: { file_ids: ['book-a', 'book-b', 'private-book'] } },
+    });
+
+    expect(primed.files).toEqual([{ file_id: 'book-b', filename: 'B.pdf', fromAgent: true }]);
+    expect(primed.toolContext).toContain('B.pdf');
+    expect(primed.toolContext).not.toContain('A.pdf');
+    expect(primed.toolContext).not.toContain('Private.pdf');
+    generateShortLivedToken.mockReturnValue('signed-token');
+    axios.post.mockResolvedValue({ data: [] });
+    const search = await createFileSearchTool({
+      userId: 'viewer',
+      files: primed.files,
+      entity_id: 'lesson-agent',
+    });
+    await search.func({ query: 'Explain chapter two' });
+
+    expect(axios.post).toHaveBeenCalledTimes(1);
+    expect(axios.post.mock.calls[0][1]).toEqual({
+      file_id: 'book-b',
+      query: 'Explain chapter two',
+      k: 5,
+      entity_id: 'lesson-agent',
+    });
+    expect(getFiles).toHaveBeenCalledTimes(1);
+  });
+
+  it('deduplicates a knowledge file also supplied as a user attachment', async () => {
+    const { getFiles } = require('~/models');
+    const file = { file_id: 'book-a', filename: 'A.pdf', user: 'owner' };
+    getFiles.mockResolvedValueOnce([file]);
+    const primed = await primeFiles({
+      req: { user: { id: 'viewer', role: 'USER' } },
+      agentId: 'lesson-agent',
+      tool_resources: { file_search: { file_ids: ['book-a'], files: [file] } },
+    });
+
+    expect(primed.files).toEqual([{ file_id: 'book-a', filename: 'A.pdf', fromAgent: true }]);
   });
 });
 

@@ -4032,6 +4032,40 @@ describe('ResumeAgentController (POST /agents/chat/resume)', () => {
       });
     });
 
+    it('restores selected textbook IDs from the paused job instead of the approval body', async () => {
+      const fileSearchSelection = { agentId: 'agent-1', fileIds: ['book-a'] };
+      const job = makeToolApprovalJob();
+      job.metadata.userMessage.fileSearchSelection = fileSearchSelection;
+      mockGenerationJobManager.getJob.mockResolvedValue(job);
+
+      await post({
+        ...approveBody(),
+        fileSearchSelection: { agentId: 'agent-1', fileIds: ['injected-book'] },
+      });
+      await settled;
+      await flush();
+
+      const [{ req }] = mockInitializeClient.mock.calls[0];
+      expect(req.body.fileSearchSelection).toEqual(fileSearchSelection);
+      expect(req.body.fileSearchSelection.fileIds).not.toBe(fileSearchSelection.fileIds);
+      const [, finalEvent] = mockGenerationJobManager.publishTerminalClaim.mock.calls[0];
+      expect(finalEvent.requestMessage.fileSearchSelection).toEqual(fileSearchSelection);
+    });
+
+    it('does not accept an approval-body textbook scope for a legacy paused job', async () => {
+      mockGenerationJobManager.getJob.mockResolvedValue(makeToolApprovalJob());
+
+      await post({
+        ...approveBody(),
+        fileSearchSelection: { agentId: 'agent-1', fileIds: ['injected-book'] },
+      });
+      await settled;
+      await flush();
+
+      const [{ req }] = mockInitializeClient.mock.calls[0];
+      expect(req.body).not.toHaveProperty('fileSearchSelection');
+    });
+
     it('attaches client response metadata to the saved message when present', async () => {
       mockGenerationJobManager.getJob.mockResolvedValue(makeToolApprovalJob());
       const contextUsage = { tokenCount: 1234 };

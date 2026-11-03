@@ -1,13 +1,14 @@
 import type {
-  IAgentEventActorContextMeta,
-  ICompactionSemanticIndexProjection,
-} from '@librechat/data-schemas';
-import type {
   Agents,
   TFile,
   TPendingSteer,
+  TFileSearchSelection,
   UserSubmittedMessageFieldPath,
 } from 'librechat-data-provider';
+import type {
+  IAgentEventActorContextMeta,
+  ICompactionSemanticIndexProjection,
+} from '@librechat/data-schemas';
 import type { ScheduleMCPOutcome, ScheduledMCPIdentity } from 'librechat-data-provider';
 import type { RunStep, StandardGraph } from '@librechat/agents';
 import type { AgentEventDetachedTerminalEvidence } from '~/agents/triggers/types';
@@ -162,6 +163,7 @@ export interface SerializableJobData {
     quotes?: string[];
     /** Skill selections, carried so a HITL-resumed turn's requestMessage keeps its pills. */
     manualSkills?: string[];
+    fileSearchSelection?: TFileSearchSelection;
     alwaysAppliedSkills?: string[];
     /** Uploaded files for the turn, carried so a HITL resume sources them from the job
      *  rather than a user DB row whose save can still be racing the approval prompt. */

@@ -86,6 +86,9 @@ export interface AgentFileEntries {
   contextFiles: Array<[string, ExtendedFile]>;
   knowledgeFiles: Array<[string, ExtendedFile]>;
   codeFiles: Array<[string, ExtendedFile]>;
+  filesLoading: boolean;
+  filesFailed: boolean;
+  refetchFiles: () => void;
 }
 
 const NO_FILES: Array<[string, ExtendedFile]> = [];
@@ -105,9 +108,9 @@ export function useAgentFileEntries(): AgentFileEntries {
   const agent = useWatch({ control, name: 'agent' });
   const agentId = useWatch({ control, name: 'id' });
   const fileMap = useFileMapContext();
-  const { data: agentFiles = [] } = useGetAgentFiles(agentId);
+  const { data: agentFiles = [], isInitialLoading, isError, refetch } = useGetAgentFiles(agentId);
 
-  return useMemo(() => {
+  const entries = useMemo(() => {
     if (agent == null || agent.id !== agentId) {
       return { contextFiles: NO_FILES, knowledgeFiles: NO_FILES, codeFiles: NO_FILES };
     }
@@ -129,6 +132,13 @@ export function useAgentFileEntries(): AgentFileEntries {
       codeFiles: agent.code_files ?? processed?.code_files ?? NO_FILES,
     };
   }, [agent, agentId, fileMap, agentFiles]);
+
+  return {
+    ...entries,
+    filesLoading: isInitialLoading,
+    filesFailed: isError,
+    refetchFiles: () => void refetch(),
+  };
 }
 
 interface UseAgentItemsOptions {

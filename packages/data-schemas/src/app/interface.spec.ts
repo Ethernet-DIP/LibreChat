@@ -4,6 +4,22 @@ import type { AppConfig } from '~/types';
 import { loadDefaultInterface, deriveSpecInterface } from './interface';
 
 describe('loadDefaultInterface', () => {
+  it('keeps textbook planning off unless a deployment enables it', async () => {
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: getConfigDefaults(),
+    });
+    expect(interfaceConfig?.textbooks).toBe(false);
+  });
+
+  it('serves the configured textbook planning option', async () => {
+    const interfaceConfig = await loadDefaultInterface({
+      config: { interface: { textbooks: true } },
+      configDefaults: getConfigDefaults(),
+    });
+    expect(interfaceConfig?.textbooks).toBe(true);
+  });
+
   it('uses the schema default for URL auto-submit when not configured', async () => {
     const interfaceConfig = await loadDefaultInterface({
       config: {},

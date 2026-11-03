@@ -246,6 +246,17 @@ export type TFile = {
 };
 
 /** One copy of a file placed in an attached workspace. */
+/** Safe book metadata available to users who can chat with an agent. */
+export type TAgentKnowledgeFile = Pick<
+  TFile,
+  'file_id' | 'filename' | 'type' | 'bytes' | 'embedded' | 'expiredAt' | 'llmDeliveryPath'
+>;
+
+export type TAgentKnowledgeResponse = {
+  enabled: boolean;
+  files: TAgentKnowledgeFile[];
+};
+
 export interface TFileWorkspaceImport {
   sha256: string;
   /** Workspace-relative path the copy was written to. */

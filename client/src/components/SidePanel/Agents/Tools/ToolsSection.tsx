@@ -33,6 +33,7 @@ import { mcpAllToken } from './items/selectors';
 import { isEphemeralAgent } from '~/common';
 import SkillsSection from './SkillsSection';
 import SkillsDialog from './SkillsDialog';
+import Knowledge from '../Knowledge';
 import ToolRow from './ToolRow';
 
 interface Props {
@@ -99,13 +100,17 @@ export default function ToolsSection({ agentId }: Props) {
 
   const uninstallToolCredentials = useUninstallToolCredentials();
 
-  const { selected, tools } = useAgentItems({
+  const { catalog, selected, tools } = useAgentItems({
     agentId,
     skills: resolvedSkills,
     skillsPermission: showSkills,
   });
 
-  const { knowledgeFiles, codeFiles } = useAgentFileEntries();
+  const { knowledgeFiles, codeFiles, filesLoading, filesFailed, refetchFiles } =
+    useAgentFileEntries();
+  const fileSearchItem = catalog.find(
+    (item) => item.kind === 'builtin' && item.id === AgentCapabilities.file_search,
+  );
   const fileCounts: CapabilityFileCounts = useMemo(
     () => ({ knowledge_files: knowledgeFiles.length, code_files: codeFiles.length }),
     [knowledgeFiles, codeFiles],
@@ -268,6 +273,16 @@ export default function ToolsSection({ agentId }: Props) {
         onInfo={setDialogItem}
         onRemove={handleQuickRemove}
       />
+      {(fileSearchItem != null || knowledgeFiles.length > 0) && (
+        <Knowledge
+          files={knowledgeFiles}
+          loading={filesLoading}
+          failed={filesFailed}
+          canSearch={fileSearchItem != null}
+          onRetry={refetchFiles}
+          onManage={fileSearchItem ? () => setDialogItem(fileSearchItem) : undefined}
+        />
+      )}
       {showSkills && (
         <SkillsSection
           items={skillItems}

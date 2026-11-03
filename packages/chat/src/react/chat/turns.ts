@@ -96,6 +96,7 @@ export function useTurns(
   const ask: TAskFunction = (
     {
       text,
+      fileSearchSelection,
       overrideConvoId,
       overrideUserMessageId,
       parentMessageId = null,
@@ -241,7 +242,14 @@ export function useTurns(
 
     const turn = buildTurn({
       text,
-      params: { text, overrideConvoId, overrideUserMessageId, parentMessageId, messageId },
+      params: {
+        text,
+        fileSearchSelection,
+        overrideConvoId,
+        overrideUserMessageId,
+        parentMessageId,
+        messageId,
+      },
       options: {
         editedContent: editedContent ?? undefined,
         editedMessageId,

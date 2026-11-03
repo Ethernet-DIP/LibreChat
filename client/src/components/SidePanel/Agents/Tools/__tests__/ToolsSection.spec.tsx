@@ -6,6 +6,7 @@ import { makeSkill } from 'test/itemFactories';
 import ToolsSection from '../ToolsSection';
 
 let mockSelected: AgentItem[] = [];
+let mockCatalog: AgentItem[] = [];
 let mockAgentTools: string[] = [];
 let mockFileEntries: {
   contextFiles: unknown[];
@@ -49,7 +50,7 @@ jest.mock('~/hooks/MCP', () => ({
 }));
 
 jest.mock('../hooks', () => ({
-  useAgentItems: () => ({ catalog: [], selected: mockSelected, tools: mockAgentTools }),
+  useAgentItems: () => ({ catalog: mockCatalog, selected: mockSelected, tools: mockAgentTools }),
   useResolvedSkills: (skills?: unknown[]) => skills,
   useAgentFileEntries: () => mockFileEntries,
   useUninstallToolCredentials: () => jest.fn(),
@@ -170,6 +171,7 @@ const skillItem: AgentItem = {
 
 beforeEach(() => {
   mockSelected = [];
+  mockCatalog = [];
   mockAgentTools = [];
   mockFileEntries = { contextFiles: [], knowledgeFiles: [], codeFiles: [] };
   mockFormValues = {};
@@ -177,6 +179,32 @@ beforeEach(() => {
 });
 
 describe('ToolsSection', () => {
+  test('lists uploaded textbooks in the sidebar and opens File Search to manage them', () => {
+    mockCatalog = [fileSearchItem];
+    mockFileEntries.knowledgeFiles = [
+      ['biology', { file_id: 'biology', filename: 'Grade 9 Biology.pdf', progress: 1 }],
+      ['mathematics', { file_id: 'mathematics', filename: 'Mathematics.pdf', progress: 1 }],
+    ];
+    render(<ToolsSection agentId="a" />);
+    expect(screen.getByRole('region', { name: 'com_ui_textbooks' })).toBeInTheDocument();
+    expect(screen.getByText('Grade 9 Biology.pdf')).toBeInTheDocument();
+    expect(screen.getByText('Mathematics.pdf')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_textbooks_manage' }));
+    expect(screen.getByTestId('item-dialog')).toHaveTextContent('file_search');
+  });
+
+  test('offers textbook management before the first upload when File Search is available', () => {
+    mockCatalog = [fileSearchItem];
+    render(<ToolsSection agentId="a" />);
+    expect(screen.getByText('com_ui_textbooks_empty')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'com_ui_textbooks_manage' })).toBeEnabled();
+  });
+
+  test('does not offer textbook management when File Search is unavailable', () => {
+    render(<ToolsSection agentId="a" />);
+    expect(screen.queryByRole('region', { name: 'com_ui_textbooks' })).not.toBeInTheDocument();
+  });
+
   test('renders Tools header', () => {
     render(<ToolsSection agentId="a" />);
     expect(screen.getByText('com_ui_tools_section_title')).toBeInTheDocument();
