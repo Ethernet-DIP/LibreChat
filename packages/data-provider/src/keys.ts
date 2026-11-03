@@ -129,6 +129,7 @@ export const DynamicQueryKeys = {
   codeSetupAttempt: (attemptId: string, userId: string) =>
     [QueryKeys.codeSetupAttempt, userId, attemptId] as const,
   agentFiles: (agentId: string) => ['agentFiles', agentId] as const,
+  agentKnowledge: (agentId: string) => [QueryKeys.agent, agentId, 'knowledge'] as const,
   projectFiles: (projectId: string) => [QueryKeys.projectFiles, projectId] as const,
   projectAvailableFiles: (projectId: string) =>
     [QueryKeys.projectAvailableFiles, projectId] as const,

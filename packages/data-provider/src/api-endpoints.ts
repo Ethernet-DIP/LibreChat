@@ -442,6 +442,8 @@ export const fileConfig = () => `${BASE_URL}/api/files/config`;
 /** Owner-scoped usage touch so queued attachments outlive the upload-window TTL. */
 export const fileUsage = () => `${BASE_URL}/api/files/usage`;
 export const agentFiles = (agentId: string) => `${BASE_URL}/api/files/agent/${agentId}`;
+export const agentKnowledge = (agentId: string) =>
+  `${BASE_URL}/api/files/agent/${encodeURIComponent(agentId)}/knowledge`;
 
 export const images = () => `${files()}/images`;
 

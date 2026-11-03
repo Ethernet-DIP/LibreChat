@@ -666,6 +666,10 @@ export const getAgentFiles = (agentId: string): Promise<f.TFile[]> => {
   return request.get(endpoints.agentFiles(agentId));
 };
 
+export const getAgentKnowledge = (agentId: string): Promise<f.TAgentKnowledgeResponse> => {
+  return request.get(endpoints.agentKnowledge(agentId));
+};
+
 export const getFileConfig = (): Promise<TFileConfig> => {
   return request.get(`${endpoints.files()}/config`);
 };
