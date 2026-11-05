@@ -96,6 +96,12 @@ jest.mock('~/hooks', () => ({
   useGetConversation: () => () => null,
 }));
 
+let mockCanUseProjects = true;
+jest.mock('~/hooks/Roles/useProjectsAccess', () => ({
+  __esModule: true,
+  default: () => mockCanUseProjects,
+}));
+
 jest.mock('~/data-provider', () => ({
   __esModule: true,
   useConversationsInfiniteQuery: (params: Record<string, unknown>) => {
@@ -311,6 +317,18 @@ describe('ConversationsSection project chats', () => {
 
   afterEach(() => {
     act(() => getDefaultStore().set(showProjectChatsAtom, false));
+  });
+
+  it('hides projects and lists every chat for a user who is not offered them', async () => {
+    mockCanUseProjects = false;
+    try {
+      await renderSection();
+      expect(screen.queryByTestId('projects-stub')).not.toBeInTheDocument();
+      expect(mockListParams).toHaveBeenCalled();
+      expect(mockListParams.mock.lastCall?.[0].projectId).toBeUndefined();
+    } finally {
+      mockCanUseProjects = true;
+    }
   });
 
   /** A project chat is shown only under its project, not twice, unless the user opts in. */

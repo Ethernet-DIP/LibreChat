@@ -4380,6 +4380,8 @@ export const chatProjectsConfigSchema = z
       .max(MAX_CHAT_PROJECT_DESCRIPTION_LENGTH_CEILING)
       .optional()
       .default(MAX_CHAT_PROJECT_DESCRIPTION_LENGTH),
+    /** Offers Chat Projects in the interface to admins only. Defaults to every user. */
+    adminOnly: z.boolean().optional(),
   })
   .strict()
   .prefault({});

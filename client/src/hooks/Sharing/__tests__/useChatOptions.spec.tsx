@@ -59,6 +59,11 @@ jest.mock('~/Providers', () => ({
   useChatContext: () => ({ setConversation: mockSetConversation }),
   useLiveAnnouncer: () => ({ announcePolite: mockAnnounce }),
 }));
+let mockCanUseProjects = true;
+jest.mock('~/hooks/Roles/useProjectsAccess', () => ({
+  __esModule: true,
+  default: () => mockCanUseProjects,
+}));
 jest.mock('~/data-provider', () => ({
   useGetConvoIdQuery: () => ({ data: mockState.cached }),
   useActiveJobs: () => ({ data: { activeJobIds: mockState.activeJobs } }),
@@ -149,6 +154,7 @@ const find = (items: MenuItemProps[], label: string) => {
 describe('useChatOptions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCanUseProjects = true;
     mockState.conversation = { conversationId: 'convo-1', title: 'Hello', pinned: false };
     mockState.cached = undefined;
     mockClient.current = new (jest.requireActual('@tanstack/react-query').QueryClient)();
@@ -178,6 +184,13 @@ describe('useChatOptions', () => {
       'com_ui_archive',
       'com_ui_delete',
     ]);
+  });
+
+  it('leaves out change project for a user who is not offered projects', () => {
+    mockCanUseProjects = false;
+    const { result } = setup();
+
+    expect(labels(result.current.items)).not.toContain('com_ui_change_project');
   });
 
   it('leaves out mark unread, which the open chat can never need', () => {

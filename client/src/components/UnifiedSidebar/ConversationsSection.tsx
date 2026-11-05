@@ -28,6 +28,7 @@ import ProjectsSection from '~/components/Conversations/ProjectsSection';
 import ChatFilterMenu from '~/components/Conversations/ChatFilterMenu';
 import PinnedSection from '~/components/Conversations/PinnedSection';
 import ProjectNamesProvider from '~/Providers/ProjectNamesContext';
+import useProjectsAccess from '~/hooks/Roles/useProjectsAccess';
 import useDrawerViewport from '~/hooks/Nav/useDrawerViewport';
 import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
 import { Conversations } from '~/components/Conversations';
@@ -42,6 +43,7 @@ const ConversationsSection = memo(() => {
   const isSmallScreen = useDrawerViewport();
   const { setSidebarOpen } = useSidebarToggle();
   const { isAuthenticated } = useAuthContext();
+  const canUseProjects = useProjectsAccess();
   useTitleGeneration(isAuthenticated);
 
   const [isChatsExpanded, setIsChatsExpanded] = useLocalStorage('chatsExpanded', true);
@@ -64,7 +66,7 @@ const ConversationsSection = memo(() => {
     isError: projectsFailed,
   } = useProjectsInfiniteQuery(
     { sortBy: 'lastConversationAt', sortDirection: 'desc', limit: 25 },
-    { enabled: isAuthenticated, staleTime: 30000, cacheTime: 300000 },
+    { enabled: isAuthenticated && canUseProjects, staleTime: 30000, cacheTime: 300000 },
   );
   /** Only a loaded, empty project list proves the account has nothing yet. While the
    *  projects are loading or failed to load, an empty Chats list claims no more than
@@ -75,8 +77,10 @@ const ConversationsSection = memo(() => {
    *  there first. Search and the archived view stay whole either way: both are places the user
    *  goes to find something, and a project chat that appears in neither list nor result
    *  would have no way back. So does a list whose projects failed to load, which would
-   *  otherwise hide every project chat behind a section that cannot show them. */
+   *  otherwise hide every project chat behind a section that cannot show them, and so does a
+   *  user who is not offered that section. */
   const scopeToUnassigned =
+    canUseProjects &&
     !showProjectChats &&
     !isArchivedView &&
     !search.debouncedQuery &&
@@ -240,7 +244,7 @@ const ConversationsSection = memo(() => {
             {/* `min-h-full` keeps the sections filling a tall sidebar, so the chats
             list still claims the space below them when there is little to show. */}
             <div ref={setScrollContent} className="flex min-h-full flex-col">
-              {!search.query && (
+              {canUseProjects && !search.query && (
                 <ProjectsSection toggleNav={toggleNav} isAuthenticated={isAuthenticated} />
               )}
               {!search.query && (
