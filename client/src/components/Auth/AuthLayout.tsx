@@ -91,10 +91,10 @@ function AuthLayout({
     <div className="bg-surface-primary relative flex min-h-screen flex-col">
       <Banner />
       <BlinkAnimation active={isFetching}>
-        <div className="mt-6 h-10 w-full bg-cover">
+        <div className="mt-6 flex h-24 w-full justify-center">
           <img
-            src="assets/logo.svg"
-            className="h-full w-full object-contain"
+            src="assets/moe-logo.jpg"
+            className="size-24 rounded-full object-contain"
             alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'LibreChat' })}
           />
         </div>
