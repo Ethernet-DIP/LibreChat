@@ -1,9 +1,16 @@
 import React from 'react';
 import * as Ariakit from '@ariakit/react';
+import { ChevronDown } from 'lucide-react';
 import type { OptionWithIcon } from '~/common';
+import { fieldControl } from './Field';
 import { cn } from '~/utils';
 
 type ComboboxProps = {
+  /** Ties an external `Label` to the input through its `htmlFor`. */
+  id?: string;
+  /** `field` matches `Input` and shows an arrow, for a combobox among form fields. */
+  variant?: 'default' | 'field';
+  required?: boolean;
   label?: string;
   placeholder?: string;
   options: OptionWithIcon[] | string[];
@@ -15,6 +22,9 @@ type ComboboxProps = {
 };
 
 export const InputCombobox: React.FC<ComboboxProps> = ({
+  id,
+  variant = 'default',
+  required,
   label,
   labelClassName,
   placeholder = 'Select an option',
@@ -51,14 +61,19 @@ export const InputCombobox: React.FC<ComboboxProps> = ({
         </Ariakit.ComboboxLabel>
       )}
       <div
-        className={cn('relative', isKeyboardFocus ? 'ring-focus-control rounded-md ring-2' : '')}
+        className={cn(
+          'relative',
+          variant === 'default' && isKeyboardFocus && 'ring-focus-control rounded-md ring-2',
+        )}
       >
         <Ariakit.Combobox
+          id={id}
+          required={required}
           placeholder={placeholder}
           className={cn(
-            'border-border-light bg-surface-primary h-10 w-full rounded-md border px-3 py-2 text-sm',
-            'placeholder-text-secondary hover:bg-surface-hover',
-            'focus:outline-hidden',
+            variant === 'field'
+              ? cn(fieldControl, 'pe-9')
+              : 'border-border-light bg-surface-primary text-text-primary placeholder-text-secondary hover:bg-surface-hover h-10 w-full rounded-md border px-3 py-2 text-sm focus:outline-hidden',
             className,
           )}
           onChange={(event) => handleChange(event.target.value)}
@@ -74,6 +89,12 @@ export const InputCombobox: React.FC<ComboboxProps> = ({
             setIsKeyboardFocus(false);
           }}
         />
+        {variant === 'field' && (
+          <ChevronDown
+            className="text-text-secondary pointer-events-none absolute inset-y-0 end-3 my-auto size-4"
+            aria-hidden="true"
+          />
+        )}
       </div>
       <Ariakit.ComboboxPopover
         gutter={4}
@@ -81,7 +102,7 @@ export const InputCombobox: React.FC<ComboboxProps> = ({
         open={isOpen}
         onClose={() => setIsOpen(false)}
         className={cn(
-          'bg-surface-primary z-50 max-h-60 w-full overflow-auto rounded-md p-1 shadow-lg',
+          'bg-surface-primary text-text-primary z-50 max-h-60 w-full overflow-auto rounded-md p-1 shadow-lg',
           'animate-in fade-in-0 zoom-in-95',
         )}
       >
