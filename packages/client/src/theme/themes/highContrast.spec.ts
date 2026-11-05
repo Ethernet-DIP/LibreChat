@@ -94,6 +94,8 @@ const syntaxTokens: Array<keyof IThemeRGB> = [
 const solidFills: Array<keyof IThemeRGB> = [
   'rgb-surface-submit',
   'rgb-surface-submit-hover',
+  'rgb-surface-brand',
+  'rgb-surface-brand-hover',
   'rgb-surface-destructive',
   'rgb-surface-destructive-hover',
   'rgb-status-success-strong',

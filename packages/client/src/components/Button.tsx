@@ -13,6 +13,7 @@ type ButtonVariantOptions =
         | 'link-accent'
         | 'hyperlink'
         | 'submit'
+        | 'brand'
         | 'outline'
         | 'outline-toggle'
         | 'floating'
@@ -163,6 +164,8 @@ const buttonVariantRecipe = cva(
         /** An action set inside a sentence in the hyperlink color, sized by its own text. */
         hyperlink: 'text-link underline-offset-4 hover:underline',
         submit: 'bg-surface-submit text-text-on-status hover:bg-surface-submit-hover',
+        /** The primary action on the sign-in and sign-up screens, in the deployment's logo color. */
+        brand: 'bg-surface-brand text-text-on-status hover:bg-surface-brand-hover',
         /**
          * The toggle that heads a collapsible sidebar section, such as Chats,
          * Projects and Pinned. It stays a quiet label rather than a control:

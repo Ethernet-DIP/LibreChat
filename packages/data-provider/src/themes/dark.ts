@@ -58,6 +58,8 @@ export const darkTheme: IThemeRGB = {
   'rgb-text-on-media': '255 255 255', // #fff (white)
   'rgb-surface-submit': '4 120 87', // #047857 (green-700)
   'rgb-surface-submit-hover': '6 95 70', // #065f46 (green-800)
+  'rgb-surface-brand': '47 98 196', // #2f62c4 (MoE logo blue, lifted off the dark page)
+  'rgb-surface-brand-hover': '32 76 160', // #204ca0
   'rgb-surface-destructive': '153 27 27', // #991b1b (red-800)
   'rgb-surface-destructive-hover': '127 29 29', // #7f1d1d (red-900)
   'rgb-surface-chat': '47 47 47', // #2f2f2f (gray-700)

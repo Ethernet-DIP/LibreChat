@@ -58,6 +58,8 @@ export const themeColorTokens = Object.freeze([
   'rgb-text-on-media',
   'rgb-surface-submit',
   'rgb-surface-submit-hover',
+  'rgb-surface-brand',
+  'rgb-surface-brand-hover',
   'rgb-surface-destructive',
   'rgb-surface-destructive-hover',
   'rgb-surface-chat',
