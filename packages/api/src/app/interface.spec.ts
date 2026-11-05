@@ -7,6 +7,14 @@ describe('buildPreLoginInterface', () => {
     expect(buildPreLoginInterface({ modelSelect: true, buildInfo: true })).toBeUndefined();
   });
 
+  it('passes a safe footer link to signed-out clients and drops an unsafe one', () => {
+    const authFooterLink = { label: 'www.moe.gov.et', url: 'https://moe.gov.et/' };
+    expect(buildPreLoginInterface({ authFooterLink })).toEqual({ authFooterLink });
+    expect(
+      buildPreLoginInterface({ authFooterLink: { label: 'bad', url: 'javascript:alert(1)' } }),
+    ).toBeUndefined();
+  });
+
   it('keeps only the legal links and a disabled build-info flag', () => {
     expect(
       buildPreLoginInterface({

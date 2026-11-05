@@ -3115,6 +3115,13 @@ export const interfaceSchema = z
       })
       .optional(),
     termsOfService: termsOfServiceSchema.optional(),
+    /** Replaces the policy links in the footer of the sign-in and sign-up pages. */
+    authFooterLink: z
+      .object({
+        label: z.string().trim().min(1),
+        url: linkUrlSchema,
+      })
+      .optional(),
     customWelcome: z.string().optional(),
     /** What heads the welcome screen when an agent, assistant or branded spec is
      *  selected: its name (`entity`), or the time-of-day greeting with the user's

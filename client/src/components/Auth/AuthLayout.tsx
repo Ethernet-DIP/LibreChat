@@ -123,7 +123,9 @@ function AuthLayout({
           {statesConsentBelowProviders && <LegalConsent startupConfig={startupConfig} />}
         </div>
       </main>
-      {!statesConsent && <Footer startupConfig={startupConfig} />}
+      {(!statesConsent || startupConfig?.interface?.authFooterLink != null) && (
+        <Footer startupConfig={startupConfig} />
+      )}
     </div>
   );
 }
