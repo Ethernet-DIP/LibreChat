@@ -9,6 +9,7 @@ import type { AttachExistingContext } from '~/hooks/Files/useAttachExisting';
 import type { ExtendedFile } from '~/common';
 import translation from '~/locales/en/translation.json';
 import TextbookWorkspace from '../Workspace';
+import { details } from '../state';
 
 const i18n = createInstance();
 void i18n.init({
@@ -138,6 +139,14 @@ const sample: TFile = {
 
 function renderWorkspace() {
   const store = createStore();
+  store.set(details, {
+    subject: 'Biology',
+    unit: '',
+    section: '',
+    grade: 'Grade 9',
+    duration: '40',
+    date: '',
+  });
   const content = () => (
     <Provider store={store}>
       <I18nextProvider i18n={i18n}>
@@ -152,8 +161,11 @@ function renderWorkspace() {
 }
 
 function chooseTopic() {
-  fireEvent.change(screen.getByLabelText('Topic or unit'), {
+  fireEvent.change(screen.getByLabelText('Unit or Chapter'), {
     target: { value: 'Photosynthesis' },
+  });
+  fireEvent.change(screen.getByLabelText('Section or Topic'), {
+    target: { value: '2.1 Overview' },
   });
 }
 
@@ -232,18 +244,20 @@ describe('indexed textbook lesson planning', () => {
     },
   );
 
-  it('sends the textbook section separately from the topic or unit', () => {
+  it('sends the section or topic separately from the unit or chapter', () => {
     mockKnowledge.agent_a = { enabled: true, files: [biology] };
     renderWorkspace();
     fireEvent.click(screen.getByRole('button', { name: /Biology.pdf/ }));
     chooseTopic();
-    fireEvent.change(screen.getByLabelText('Textbook section (optional)'), {
+    fireEvent.change(screen.getByLabelText('Section or Topic'), {
       target: { value: ' 2.3 Light reactions ' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Create daily lesson plan' }));
     const { text } = mockSubmitMessage.mock.calls[0][0];
-    expect(text).toContain('Topic or unit: Photosynthesis\n');
-    expect(text).toContain('Textbook section: 2.3 Light reactions\n');
+    expect(text).toContain('Subject: Biology\n');
+    expect(text).toContain('Grade: Grade 9\n');
+    expect(text).toContain('Unit or chapter: Photosynthesis\n');
+    expect(text).toContain('Section or topic: 2.3 Light reactions\n');
   });
 
   it('keeps a submitted textbook scope unchanged while selecting books for the next lesson', () => {
@@ -268,10 +282,8 @@ describe('indexed textbook lesson planning', () => {
     expect(screen.getByRole('button', { name: 'Create daily lesson plan' })).toBeDisabled();
     expect(submitted.fileSearchSelection).toEqual({ agentId: 'agent_a', fileIds: ['biology'] });
     expect(submitted.text).toContain('Selected textbooks: Biology.pdf');
-    expect(submitted.text).toContain('Topic or unit: Photosynthesis');
-    expect(submitted.text).toContain(
-      'Textbook section: Not specified. Cover the topic or unit above.',
-    );
+    expect(submitted.text).toContain('Unit or chapter: Photosynthesis');
+    expect(submitted.text).toContain('Section or topic: 2.1 Overview');
     mockIsSubmitting = false;
     rerenderWorkspace();
     fireEvent.click(screen.getByRole('button', { name: 'Create daily lesson plan' }));
