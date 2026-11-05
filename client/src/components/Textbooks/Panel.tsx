@@ -221,6 +221,15 @@ export default function TextbookPanel({
             required
           />
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`${id}-section`}>{localize('com_ui_textbooks_section')}</Label>
+          <Input
+            id={`${id}-section`}
+            value={details.section}
+            onChange={(event) => onDetails({ ...details, section: event.target.value })}
+            placeholder={localize('com_ui_textbooks_section_placeholder')}
+          />
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor={`${id}-grade`}>{localize('com_ui_textbooks_grade')}</Label>

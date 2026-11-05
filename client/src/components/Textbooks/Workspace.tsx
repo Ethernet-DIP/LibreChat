@@ -187,6 +187,7 @@ function Library({ disabled }: { disabled: boolean }) {
     const text = localize('com_ui_textbooks_prompt', {
       books: selected.map((file) => file.filename).join(', '),
       topic: details.topic.trim(),
+      section: details.section.trim() || localize('com_ui_textbooks_section_unspecified'),
       grade: details.grade.trim() || localize('com_ui_textbooks_infer_grade'),
       duration,
       date: details.date || localize('com_ui_textbooks_date_unspecified'),
