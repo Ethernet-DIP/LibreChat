@@ -467,7 +467,12 @@ const registerUser = async (user, additionalData = {}) => {
     /** `userCreated` separates this from the identical 200 returned when the email is
      * already in use, so a caller can act on an account having actually been created
      * without the response body revealing which of the two happened. */
-    return { status: 200, message: genericVerificationMessage, userCreated: true };
+    return {
+      status: 200,
+      message: genericVerificationMessage,
+      userCreated: true,
+      userId: newUserId.toString(),
+    };
   } catch (err) {
     logger.error('[registerUser] Error in registering user:', getSafeErrorMetadata(err));
     if (newUserId) {

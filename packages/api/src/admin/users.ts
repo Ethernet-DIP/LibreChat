@@ -9,14 +9,21 @@ import type {
   AdminUserSearchResult,
   UserDeleteResult,
 } from '@librechat/data-schemas';
-import type { TCheckpointerConfig } from 'librechat-data-provider';
+import type {
+  TAdminCreateUserErrorCode,
+  TAdminCreateUserResponse,
+  TCheckpointerConfig,
+} from 'librechat-data-provider';
 import type { FilterQuery } from 'mongoose';
 import type { Response } from 'express';
 import type { UserGenerationControl } from '~/user/generations';
 import type { UserErasureDeps } from '~/user/erasure';
 import type { ServerRequest } from '~/types/http';
+import type { RecordAuditEntry } from './audit';
 import { stopUserGenerations } from '~/user/generations';
+import { getSafeErrorMetadata } from '~/utils/errors';
 import { invalidatingConfigStore } from './cascade';
+import { createAdminAuditEmitter } from './audit';
 import { parsePagination } from './pagination';
 import { eraseUserData } from '~/user/erasure';
 
@@ -63,6 +70,15 @@ export interface AdminErasureTarget {
 export interface AdminErasureContext {
   deps: UserErasureDeps;
   checkpointer?: TCheckpointerConfig;
+}
+
+/** The outcome of the shared registration flow, which validates input and hashes the password. */
+export interface RegisterUserResult {
+  status: number;
+  message: string;
+  /** Separates a new account from the identical 200 returned for an email already in use. */
+  userCreated?: boolean;
+  userId?: string;
 }
 
 export interface AdminUsersDeps {
@@ -121,12 +137,19 @@ export interface AdminUsersDeps {
    * keep authentication material and can collide with a later registration.
    */
   deletePasskeysByUser: (userId: string) => Promise<number>;
+  registerUser: (
+    user: Record<string, unknown>,
+    additionalData: { role: string; emailVerified: boolean },
+  ) => Promise<RegisterUserResult>;
+  recordAuditEntry?: RecordAuditEntry;
+  auditFailClosed?: boolean;
 }
 
 export function createAdminUsersHandlers(deps: AdminUsersDeps): {
   listUsers: (req: ServerRequest, res: Response) => Promise<Response>;
   searchUsers: (req: ServerRequest, res: Response) => Promise<Response>;
   deleteUser: (req: ServerRequest, res: Response) => Promise<Response>;
+  createUser: (req: ServerRequest, res: Response) => Promise<Response>;
 } {
   const {
     findUsers,
@@ -150,7 +173,16 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps): {
     quiesceUserSchedules,
     restoreUserSchedulesFromDeletion,
     generationJobs,
+    registerUser,
+    recordAuditEntry,
+    auditFailClosed,
   } = deps;
+
+  const emitAudit = createAdminAuditEmitter({
+    recordAuditEntry,
+    failClosed: auditFailClosed,
+    logPrefix: '[adminUsers]',
+  });
 
   async function listUsersHandler(req: ServerRequest, res: Response) {
     try {
@@ -224,6 +256,51 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps): {
     } catch (error) {
       logger.error('[adminUsers] searchUsers error:', error);
       return res.status(500).json({ error: 'Failed to search users' });
+    }
+  }
+
+  /**
+   * Accounts made here are always standard users: this capability manages users, not roles, so
+   * any `role` in the body is ignored rather than letting it grant more than its holder was given.
+   * An admin vouches for the address, so no verification email is sent.
+   */
+  async function createUserHandler(req: ServerRequest, res: Response) {
+    const fail = (status: number, code: TAdminCreateUserErrorCode) =>
+      res.status(status).json({ error: code, code });
+
+    try {
+      const { name, username, email, password } = (req.body ?? {}) as Record<string, unknown>;
+      const result = await registerUser(
+        { name, username, email, password, confirm_password: password },
+        { role: SystemRoles.USER, emailVerified: true },
+      );
+
+      if (result.userCreated === true && result.userId != null) {
+        const createdEmail = String(email).trim().toLowerCase();
+        await emitAudit(req, {
+          action: 'user.created',
+          target: { type: 'user', id: result.userId, name: createdEmail },
+          metadata: { role: SystemRoles.USER },
+        });
+        const body: TAdminCreateUserResponse = {
+          user: { id: result.userId, email: createdEmail, role: SystemRoles.USER },
+        };
+        return res.status(201).json(body);
+      }
+
+      switch (result.status) {
+        case 200:
+          return fail(409, 'email_in_use');
+        case 403:
+          return fail(403, 'email_domain_not_allowed');
+        case 404:
+          return fail(400, 'invalid_input');
+        default:
+          return fail(500, 'create_failed');
+      }
+    } catch (error) {
+      logger.error('[adminUsers] createUser error:', getSafeErrorMetadata(error));
+      return fail(500, 'create_failed');
     }
   }
 
@@ -366,6 +443,7 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps): {
   return {
     listUsers: listUsersHandler,
     searchUsers: searchUsersHandler,
+    createUser: createUserHandler,
     deleteUser: deleteUserHandler,
   };
 }

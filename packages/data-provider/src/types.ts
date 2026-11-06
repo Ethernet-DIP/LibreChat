@@ -786,6 +786,24 @@ export type TRegisterUser = {
   token?: string;
 };
 
+export type TAdminCreateUserRequest = {
+  name: string;
+  email: string;
+  password: string;
+  username?: string;
+};
+
+export type TAdminCreateUserResponse = {
+  user: { id: string; email: string; role: string };
+};
+
+/** Stable codes an admin-create-user failure carries for the client to localize. */
+export type TAdminCreateUserErrorCode =
+  | 'invalid_input'
+  | 'email_in_use'
+  | 'email_domain_not_allowed'
+  | 'create_failed';
+
 export type TLoginUser = {
   email: string;
   password: string;

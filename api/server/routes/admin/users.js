@@ -17,6 +17,7 @@ const {
   cancelAgentTriggerUserPurge,
   purgeAgentTriggerDeliveriesForUser,
 } = require('~/server/services/Agents/triggers');
+const { registerUser } = require('~/server/services/AuthService');
 const { processDeleteRequest } = require('~/server/services/Files/process');
 const { invalidateCachedTools } = require('~/server/services/Config/getCachedTools');
 const { getMCPManager, getMCPServersRegistry } = require('~/config');
@@ -54,7 +55,7 @@ const resolveErasure = createErasureResolver({
 
 const requireAdminAccess = requireCapability(SystemCapabilities.ACCESS_ADMIN);
 const requireReadUsers = requireCapability(SystemCapabilities.READ_USERS);
-// const requireManageUsers = requireCapability(SystemCapabilities.MANAGE_USERS);
+const requireManageUsers = requireCapability(SystemCapabilities.MANAGE_USERS);
 
 const handlers = createAdminUsersHandlers({
   findUsers: db.findUsers,
@@ -84,12 +85,16 @@ const handlers = createAdminUsersHandlers({
   quiesceUserSchedules,
   restoreUserSchedulesFromDeletion,
   generationJobs: GenerationJobManager,
+  registerUser,
+  recordAuditEntry: db.recordAuditEntry,
+  auditFailClosed: process.env.AUDIT_LOG_FAIL_CLOSED === 'true',
 });
 
 router.use(requireJwtAuth, requireAdminAccess);
 
 router.get('/', requireReadUsers, handlers.listUsers);
 router.get('/search', requireReadUsers, handlers.searchUsers);
+router.post('/', requireManageUsers, handlers.createUser);
 // router.delete('/:id', requireManageUsers, handlers.deleteUser);
 
 module.exports = router;
