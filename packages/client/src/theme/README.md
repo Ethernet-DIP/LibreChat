@@ -312,6 +312,7 @@ function MyComponent() {
 - `bg-surface-secondary` - Secondary background
 - `bg-surface-tertiary` - Tertiary background
 - `bg-surface-submit` - Submit button background
+- `bg-surface-brand` - Primary action on the sign-in and sign-up screens
 - `bg-surface-destructive` - Destructive action background
 - `bg-surface-dialog` - Dialog/modal background
 - `bg-surface-overlay` - Dialog/modal scrim, adapted per theme

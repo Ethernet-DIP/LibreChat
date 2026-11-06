@@ -232,7 +232,7 @@ const Registration: React.FC = () => {
                 }
                 type="submit"
                 aria-label="Submit registration"
-                variant="submit"
+                variant="brand"
                 shape="soft"
                 size="auth"
                 className="w-full"

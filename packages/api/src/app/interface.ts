@@ -6,7 +6,7 @@ type InterfaceConfig = NonNullable<AppConfig['interfaceConfig']>;
 
 type PreLoginInterface = Pick<
   InterfaceConfig,
-  'privacyPolicy' | 'termsOfService' | 'buildInfo' | 'theme'
+  'privacyPolicy' | 'termsOfService' | 'authFooterLink' | 'buildInfo' | 'theme'
 >;
 
 type PolicyLinks = Pick<InterfaceConfig, 'privacyPolicy' | 'termsOfService'>;
@@ -99,7 +99,7 @@ export function checkConfigPolicyLinks(config: unknown): ConfigPolicyLinkCheck {
 }
 
 /**
- * Selects the interface fields a signed-out client may see: the legal links the
+ * Selects the interface fields a signed-out client may see: the legal and footer links the
  * login page renders (safe links only), a disabled build-info flag,
  * and the deployment theme so the login page paints it instead of switching after
  * sign-in. Returns `undefined` when none of them is configured, so the payload
@@ -111,10 +111,12 @@ export function buildPreLoginInterface(
   if (!interfaceConfig) {
     return undefined;
   }
-  const { privacyPolicy, termsOfService, buildInfo, theme } = withSafePolicyLinks(interfaceConfig);
+  const { privacyPolicy, termsOfService, authFooterLink, buildInfo, theme } =
+    withSafePolicyLinks(interfaceConfig);
   const selected: PreLoginInterface = {
     ...(privacyPolicy && { privacyPolicy }),
     ...(termsOfService && { termsOfService }),
+    ...(authFooterLink?.url && isSafeLinkUrl(authFooterLink.url) && { authFooterLink }),
     ...(buildInfo === false && { buildInfo }),
     ...(theme && { theme }),
   };

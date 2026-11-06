@@ -70,6 +70,9 @@ export interface IThemeRGB {
   'rgb-text-on-media'?: string;
   'rgb-surface-submit'?: string;
   'rgb-surface-submit-hover'?: string;
+  /** Primary action on the sign-in and sign-up screens, in the deployment's logo color. */
+  'rgb-surface-brand'?: string;
+  'rgb-surface-brand-hover'?: string;
   'rgb-surface-destructive'?: string;
   'rgb-surface-destructive-hover'?: string;
   'rgb-surface-chat'?: string;
@@ -328,6 +331,8 @@ export interface IThemeVariables {
   '--text-on-media': string;
   '--surface-submit': string;
   '--surface-submit-hover': string;
+  '--surface-brand': string;
+  '--surface-brand-hover': string;
   '--surface-destructive': string;
   '--surface-destructive-hover': string;
   '--surface-chat': string;
@@ -509,6 +514,8 @@ export interface IThemeColors {
   'text-on-media'?: string;
   'surface-submit'?: string;
   'surface-submit-hover'?: string;
+  'surface-brand'?: string;
+  'surface-brand-hover'?: string;
   'surface-destructive'?: string;
   'surface-destructive-hover'?: string;
   'surface-chat'?: string;

@@ -127,7 +127,7 @@ function RequestPasswordReset() {
           aria-label="Continue with password reset"
           type="submit"
           disabled={!!errors.email || isLoading}
-          variant="submit"
+          variant="brand"
           shape="soft"
           size="auth"
           className="w-full"

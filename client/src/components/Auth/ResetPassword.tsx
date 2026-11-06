@@ -41,7 +41,7 @@ function ResetPassword() {
             <Button
               onClick={() => navigate('/login')}
               aria-label={localize('com_auth_sign_in')}
-              variant="submit"
+              variant="brand"
               size="auth-action"
               shape="auth-action"
             >
@@ -139,7 +139,7 @@ function ResetPassword() {
           type="submit"
           aria-label={localize('com_auth_submit_registration')}
           disabled={!!errors.password || !!errors.confirm_password || isSubmitting}
-          variant="submit"
+          variant="brand"
           shape="soft"
           size="auth"
           className="w-full"

@@ -55,7 +55,8 @@ for (const viewport of [
       await expect(book).toHaveAttribute('aria-pressed', 'false');
       await book.click();
       await expect(book).toHaveAttribute('aria-pressed', 'true');
-      await panel.getByLabel('Topic, unit, or section').fill('Unit 2: The microscope and its uses');
+      await panel.getByLabel('Topic or unit').fill('Unit 2: Cell biology');
+      await panel.getByLabel('Textbook section (optional)').fill('The microscope and its uses');
       await panel.getByLabel('Grade and section').fill('Grade 9, A');
       await panel.getByLabel('Duration (minutes)').fill('40');
       await panel.getByLabel('Lesson date (optional)').fill('2026-11-02');
@@ -68,7 +69,8 @@ for (const viewport of [
       await panel.getByRole('button', { name: 'Create daily lesson plan' }).click();
       const request = await requestPromise;
       const payload = request.postDataJSON();
-      expect(payload.text).toContain('Unit 2: The microscope and its uses');
+      expect(payload.text).toContain('Topic or unit: Unit 2: Cell biology');
+      expect(payload.text).toContain('Textbook section: The microscope and its uses');
       expect(payload.text).toContain('Grade 9, A');
       expect(payload.text).toContain('Duration: 40 minutes');
       expect(payload.text).toContain('2026-11-02');

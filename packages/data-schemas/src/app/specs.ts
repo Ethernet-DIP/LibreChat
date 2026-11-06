@@ -51,7 +51,11 @@ export function processModelSpecs(
         'modelSpecs.enforce is true but list is empty — enforcement disabled at runtime.',
       );
     }
-    return undefined;
+    /** Picker-only deployments use `addedEndpoints` alone to scope the endpoint menu. */
+    if ((specsConfig.addedEndpoints?.length ?? 0) === 0) {
+      return undefined;
+    }
+    return { ...specsConfig, enforce: false, list: [] };
   }
 
   for (const spec of list) {

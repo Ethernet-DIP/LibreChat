@@ -141,7 +141,7 @@ const TwoFactorScreen: React.FC = React.memo(() => {
         <div className="flex items-center justify-between">
           <Button
             type="submit"
-            variant="submit"
+            variant="brand"
             data-testid="login-button"
             disabled={isLoading}
             shape="soft"

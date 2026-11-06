@@ -152,7 +152,7 @@ function renderWorkspace() {
 }
 
 function chooseTopic() {
-  fireEvent.change(screen.getByLabelText('Topic, unit, or section'), {
+  fireEvent.change(screen.getByLabelText('Topic or unit'), {
     target: { value: 'Photosynthesis' },
   });
 }
@@ -232,6 +232,20 @@ describe('indexed textbook lesson planning', () => {
     },
   );
 
+  it('sends the textbook section separately from the topic or unit', () => {
+    mockKnowledge.agent_a = { enabled: true, files: [biology] };
+    renderWorkspace();
+    fireEvent.click(screen.getByRole('button', { name: /Biology.pdf/ }));
+    chooseTopic();
+    fireEvent.change(screen.getByLabelText('Textbook section (optional)'), {
+      target: { value: ' 2.3 Light reactions ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create daily lesson plan' }));
+    const { text } = mockSubmitMessage.mock.calls[0][0];
+    expect(text).toContain('Topic or unit: Photosynthesis\n');
+    expect(text).toContain('Textbook section: 2.3 Light reactions\n');
+  });
+
   it('keeps a submitted textbook scope unchanged while selecting books for the next lesson', () => {
     mockKnowledge.agent_a = { enabled: true, files: [biology, mathematics] };
     const { rerenderWorkspace } = renderWorkspace();
@@ -254,6 +268,10 @@ describe('indexed textbook lesson planning', () => {
     expect(screen.getByRole('button', { name: 'Create daily lesson plan' })).toBeDisabled();
     expect(submitted.fileSearchSelection).toEqual({ agentId: 'agent_a', fileIds: ['biology'] });
     expect(submitted.text).toContain('Selected textbooks: Biology.pdf');
+    expect(submitted.text).toContain('Topic or unit: Photosynthesis');
+    expect(submitted.text).toContain(
+      'Textbook section: Not specified. Cover the topic or unit above.',
+    );
     mockIsSubmitting = false;
     rerenderWorkspace();
     fireEvent.click(screen.getByRole('button', { name: 'Create daily lesson plan' }));

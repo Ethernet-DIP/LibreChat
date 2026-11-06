@@ -6,6 +6,28 @@ const specsConfig = (list: unknown[]): TCustomConfig['modelSpecs'] =>
   ({ enforce: false, prioritize: true, list }) as TCustomConfig['modelSpecs'];
 
 describe('processModelSpecs', () => {
+  it('drops an empty list that does not scope any endpoints', () => {
+    const modelSpecs = { enforce: false, prioritize: true, list: [] };
+    expect(processModelSpecs(undefined, modelSpecs, { modelSelect: true })).toBeUndefined();
+    expect(
+      processModelSpecs(undefined, { ...modelSpecs, addedEndpoints: [] }, { modelSelect: true }),
+    ).toBeUndefined();
+  });
+
+  it('keeps addedEndpoints without specs and never enforces an empty list', () => {
+    const result = processModelSpecs(
+      undefined,
+      { enforce: true, prioritize: true, list: [], addedEndpoints: [EModelEndpoint.agents] },
+      { modelSelect: true },
+    );
+    expect(result).toEqual({
+      enforce: false,
+      prioritize: true,
+      list: [],
+      addedEndpoints: [EModelEndpoint.agents],
+    });
+  });
+
   it('returns undefined without model specs', () => {
     expect(processModelSpecs(undefined, undefined, undefined)).toBeUndefined();
   });

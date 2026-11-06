@@ -1,6 +1,9 @@
 import { TStartupConfig } from 'librechat-data-provider';
-import { policyUrls } from '~/utils/policies';
+import { policyUrls, publishedPolicyUrl } from '~/utils/policies';
 import { useLocalize } from '~/hooks';
+
+const linkClassName =
+  'text-accent-primary hover:text-accent-primary-hover hover:decoration-accent-primary-hover focus:text-accent-primary-hover focus:decoration-accent-primary-hover text-sm underline decoration-transparent transition-all duration-200';
 
 function Footer({ startupConfig }: { startupConfig: TStartupConfig | null | undefined }) {
   const localize = useLocalize();
@@ -10,10 +13,22 @@ function Footer({ startupConfig }: { startupConfig: TStartupConfig | null | unde
   /** Read the way the consent reads them, so a blank url is not a policy on one
    *  screen and a link back to this page on another. */
   const { privacyPolicyUrl, termsOfServiceUrl } = policyUrls(startupConfig);
+  const footerLink = startupConfig.interface?.authFooterLink;
+  const footerLinkUrl = publishedPolicyUrl(footerLink?.url);
+
+  if (footerLink && footerLinkUrl != null) {
+    return (
+      <div className="m-4 flex justify-center gap-2" role="contentinfo">
+        <a className={linkClassName} href={footerLinkUrl} rel="noreferrer">
+          {footerLink.label}
+        </a>
+      </div>
+    );
+  }
 
   const privacyPolicyRender = privacyPolicyUrl != null && (
     <a
-      className="text-accent-primary hover:text-accent-primary-hover hover:decoration-accent-primary-hover focus:text-accent-primary-hover focus:decoration-accent-primary-hover text-sm underline decoration-transparent transition-all duration-200"
+      className={linkClassName}
       href={privacyPolicyUrl}
       // Removed for WCAG compliance
       // target={privacyPolicy.openNewTab ? '_blank' : undefined}
@@ -25,7 +40,7 @@ function Footer({ startupConfig }: { startupConfig: TStartupConfig | null | unde
 
   const termsOfServiceRender = termsOfServiceUrl != null && (
     <a
-      className="text-accent-primary hover:text-accent-primary-hover hover:decoration-accent-primary-hover focus:text-accent-primary-hover focus:decoration-accent-primary-hover text-sm underline decoration-transparent transition-all duration-200"
+      className={linkClassName}
       href={termsOfServiceUrl}
       // Removed for WCAG compliance
       // target={termsOfService.openNewTab ? '_blank' : undefined}

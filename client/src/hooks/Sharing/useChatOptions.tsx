@@ -19,6 +19,7 @@ import DeleteButton from '~/components/Conversations/ConvoOptions/DeleteButton';
 import { useLocalize, useNavigateToConvo, useNewConvo } from '~/hooks';
 import { useChatSettings } from '~/Providers/ChatSettingsContext';
 import useProjectMenuItem from '~/hooks/Chat/useProjectMenuItem';
+import useProjectsAccess from '~/hooks/Roles/useProjectsAccess';
 import { useChatContext, useLiveAnnouncer } from '~/Providers';
 import { NotificationSeverity } from '~/common';
 import useExportShare from './useExportShare';
@@ -169,6 +170,7 @@ export default function useChatOptions({
     );
   };
 
+  const canUseProjects = useProjectsAccess();
   const projectItem = useProjectMenuItem({
     conversationId,
     chatProjectId,
@@ -225,7 +227,7 @@ export default function useChatOptions({
       show: canOrganize,
       icon: <Pin className={iconClass} aria-hidden="true" />,
     },
-    { ...projectItem, show: canOrganize },
+    { ...projectItem, show: canOrganize && canUseProjects },
     {
       label: localize('com_ui_duplicate'),
       onClick: () => duplicateMutation.mutate({ conversationId }),

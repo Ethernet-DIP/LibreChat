@@ -123,6 +123,18 @@ test('renders login form', () => {
   expect(getByLabelText(/password/i)).toBeInTheDocument();
 });
 
+test('paints the login button in the brand color', () => {
+  render(
+    <Login
+      onSubmit={mockLogin}
+      startupConfig={mockStartupConfig}
+      error={undefined}
+      setError={jest.fn()}
+    />,
+  );
+  expect(getByTestId(document.body, 'login-button')).toHaveClass('bg-surface-brand');
+});
+
 test('submits login form', async () => {
   const { getByLabelText } = render(
     <Login

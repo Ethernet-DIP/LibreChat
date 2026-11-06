@@ -18,6 +18,7 @@ import { codeSetupRoute } from './CodeSetup';
 import LoginLayout from './Layouts/Login';
 import dashboardRoutes from './Dashboard';
 import WithRum from '~/lib/rum/WithRum';
+import ProjectsRoute from './Projects';
 import ShareRoute from './ShareRoute';
 import ChatRoute from './ChatRoute';
 import Search from './Search';
@@ -181,12 +182,17 @@ export const router = createBrowserRouter(
                   lazy: loadSkillsView,
                 },
                 {
-                  path: 'projects',
-                  lazy: loadProjectsView,
-                },
-                {
-                  path: 'projects/:projectId',
-                  lazy: loadProjectWorkspace,
+                  element: <ProjectsRoute />,
+                  children: [
+                    {
+                      path: 'projects',
+                      lazy: loadProjectsView,
+                    },
+                    {
+                      path: 'projects/:projectId',
+                      lazy: loadProjectWorkspace,
+                    },
+                  ],
                 },
                 {
                   path: 'agents',

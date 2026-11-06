@@ -85,6 +85,8 @@
   --color-scrim-modal: rgb(var(--surface-overlay) / var(--theme-modal-scrim-opacity, 0.65));
   --color-surface-submit: rgb(var(--surface-submit));
   --color-surface-submit-hover: rgb(var(--surface-submit-hover));
+  --color-surface-brand: rgb(var(--surface-brand));
+  --color-surface-brand-hover: rgb(var(--surface-brand-hover));
   --color-surface-destructive: rgb(var(--surface-destructive));
   --color-surface-destructive-hover: rgb(var(--surface-destructive-hover));
   --color-surface-chat: rgb(var(--surface-chat));

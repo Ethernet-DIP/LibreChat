@@ -94,6 +94,8 @@ export const highContrastLightTheme: IThemeRGB = {
   'rgb-text-on-media': '255 255 255', // #ffffff
   'rgb-surface-submit': '0 92 46', // #005c2e
   'rgb-surface-submit-hover': '0 61 30', // #003d1e
+  'rgb-surface-brand': '0 51 128', // #003380
+  'rgb-surface-brand-hover': '0 36 92', // #00245c
   'rgb-surface-destructive': '161 0 0', // #a10000
   'rgb-surface-destructive-hover': '122 0 0', // #7a0000
   'rgb-surface-chat': '255 255 255', // #ffffff
@@ -312,6 +314,8 @@ export const highContrastDarkTheme: IThemeRGB = {
   'rgb-text-on-media': '255 255 255', // #ffffff
   'rgb-surface-submit': '127 240 179', // #7ff0b3
   'rgb-surface-submit-hover': '163 245 204', // #a3f5cc
+  'rgb-surface-brand': '153 197 255', // #99c5ff
+  'rgb-surface-brand-hover': '189 217 255', // #bdd9ff
   'rgb-surface-destructive': '255 143 143', // #ff8f8f
   'rgb-surface-destructive-hover': '255 179 179', // #ffb3b3
   'rgb-surface-chat': '0 0 0', // #000000
