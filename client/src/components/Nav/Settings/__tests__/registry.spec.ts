@@ -29,6 +29,7 @@ const settingsContext: SettingsContextValue = {
   engineTTS: 'browser',
   langfuseConnectionAccess: false,
   adminPanelURL: '',
+  isAdmin: false,
   replyTabBadgeAllowed: true,
   replyNotificationsAllowed: true,
   replyNotificationSoundAllowed: true,
@@ -203,5 +204,11 @@ describe('settings registry', () => {
     it('hides email changes when administrators disable them', () => {
       expect(emailChangeEntry?.show?.({ ...settingsContext, allowEmailChange: false })).toBe(false);
     });
+  });
+
+  it('offers Add user only to admins', () => {
+    const entry = registry.find((setting) => setting.id === 'addUser');
+    expect(entry?.show?.(settingsContext)).toBe(false);
+    expect(entry?.show?.({ ...settingsContext, isAdmin: true })).toBe(true);
   });
 });

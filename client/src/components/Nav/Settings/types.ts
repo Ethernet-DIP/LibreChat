@@ -62,6 +62,7 @@ export interface SettingsContextValue {
   langfuseConnectionAccess: boolean;
   langfusePromptSyncAccess?: boolean;
   adminPanelURL: string;
+  isAdmin: boolean;
   replyTabBadgeAllowed: boolean;
   replyNotificationsAllowed: boolean;
   replyNotificationSoundAllowed: boolean;
