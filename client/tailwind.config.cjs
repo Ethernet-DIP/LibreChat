@@ -68,6 +68,32 @@ module.exports = {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0' },
         },
+        /** Login backdrop and logo: slow drifting glow, a floating logo with a pulsing halo,
+         *  and the card rising into place. All are disabled by `motion-reduce:animate-none`. */
+        'aurora-a': {
+          '0%, 100%': { transform: 'translate3d(0, 0, 0) scale(1)' },
+          '50%': { transform: 'translate3d(8%, 10%, 0) scale(1.15)' },
+        },
+        'aurora-b': {
+          '0%, 100%': { transform: 'translate3d(0, 0, 0) scale(1.1)' },
+          '50%': { transform: 'translate3d(-10%, -8%, 0) scale(0.95)' },
+        },
+        'logo-float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-6px)' },
+        },
+        'logo-halo': {
+          '0%': { transform: 'scale(0.9)', opacity: '0.55' },
+          '100%': { transform: 'scale(1.7)', opacity: '0' },
+        },
+        'caret-blink': {
+          '0%, 49%': { opacity: '1' },
+          '50%, 100%': { opacity: '0' },
+        },
+        'auth-rise': {
+          from: { opacity: '0', transform: 'translateY(16px) scale(0.98)' },
+          to: { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
         'refresh-link-spin': {
           from: { transform: 'rotate(0deg)' },
           to: { transform: 'rotate(360deg)' },
@@ -89,6 +115,12 @@ module.exports = {
         'slide-out-right': 'slide-out-right 300ms cubic-bezier(0.25, 0.1, 0.25, 1)',
         'shortcut-shake': 'shortcut-shake 0.25s ease-in-out',
         'logo-blink': 'logo-blink 3s infinite',
+        'aurora-a': 'aurora-a 18s ease-in-out infinite',
+        'aurora-b': 'aurora-b 22s ease-in-out infinite',
+        'logo-float': 'logo-float 5s ease-in-out infinite',
+        'logo-halo': 'logo-halo 3s cubic-bezier(0, 0, 0.2, 1) infinite',
+        'caret-blink': 'caret-blink 1s steps(1) infinite',
+        'auth-rise': 'auth-rise 600ms cubic-bezier(0.22, 1, 0.36, 1) var(--stagger, 0ms) both',
         'refresh-link-spin': 'refresh-link-spin 650ms cubic-bezier(0.42, 0, 0.58, 1)',
         'reset-spin': 'reset-spin 500ms cubic-bezier(0.22, 1, 0.36, 1)',
       },

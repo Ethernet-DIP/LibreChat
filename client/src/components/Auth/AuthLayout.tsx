@@ -5,6 +5,8 @@ import { hasPublishedPolicies } from '~/utils/policies';
 import { TranslationKeys, useLocalize } from '~/hooks';
 import SocialLoginRender from './SocialLoginRender';
 import { BlinkAnimation } from './BlinkAnimation';
+import AuthShowcase from './AuthShowcase';
+import AuthBackdrop from './AuthBackdrop';
 import LegalConsent from './LegalConsent';
 import { Banner } from '../Banners';
 import Footer from './Footer';
@@ -88,44 +90,52 @@ function AuthLayout({
   };
 
   return (
-    <div className="bg-surface-primary relative flex min-h-screen flex-col">
-      <Banner />
-      <BlinkAnimation active={isFetching}>
-        <div className="mt-6 flex h-24 w-full justify-center">
-          <img
-            src="assets/moe-logo.jpg"
-            className="size-24 rounded-full object-contain"
-            alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'LibreChat' })}
-          />
+    <div className="bg-surface-primary flex min-h-screen">
+      <div className="relative isolate flex min-h-screen min-w-0 grow basis-1/2 flex-col">
+        <AuthBackdrop />
+        <Banner />
+        <DisplayError />
+        <div className="absolute inset-s-0 bottom-0 md:m-4">
+          <ThemeSelector />
         </div>
-      </BlinkAnimation>
-      <DisplayError />
-      <div className="absolute inset-s-0 bottom-0 md:m-4">
-        <ThemeSelector />
-      </div>
 
-      <main className="flex grow items-center justify-center">
-        <div
-          className={cn(
-            'bg-surface-primary overflow-hidden px-6 py-4 sm:rounded-lg',
-            isTwoFactorSetup ? 'w-11/12 max-w-lg' : 'w-authPageWidth sm:max-w-md',
-          )}
-        >
-          {!hasStartupConfigError && !isFetching && header && (
-            <h1 className="text-text-primary mb-4 text-center text-3xl font-semibold select-none">
-              {header}
-            </h1>
-          )}
-          {children}
-          {showsSocialLogin && (
-            <SocialLoginRender startupConfig={startupConfig} showPasskey={isLogin} />
-          )}
-          {statesConsentBelowProviders && <LegalConsent startupConfig={startupConfig} />}
-        </div>
-      </main>
-      {(!statesConsent || startupConfig?.interface?.authFooterLink != null) && (
-        <Footer startupConfig={startupConfig} />
-      )}
+        <main className="flex grow flex-col items-center justify-center gap-2">
+          <BlinkAnimation active={isFetching}>
+            <div className="relative flex h-24 w-full items-center justify-center">
+              <span
+                aria-hidden="true"
+                className="animate-logo-halo bg-surface-brand/40 absolute size-24 rounded-full motion-reduce:animate-none"
+              />
+              <img
+                src="assets/moe-logo.jpg"
+                className="animate-logo-float relative size-24 rounded-full object-contain shadow-lg motion-reduce:animate-none"
+                alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'LibreChat' })}
+              />
+            </div>
+          </BlinkAnimation>
+          <div
+            className={cn(
+              'animate-auth-rise overflow-hidden px-6 py-4 motion-reduce:animate-none sm:rounded-lg',
+              isTwoFactorSetup ? 'w-11/12 max-w-lg' : 'w-authPageWidth sm:max-w-md',
+            )}
+          >
+            {!hasStartupConfigError && !isFetching && header && (
+              <h1 className="text-text-primary mb-4 text-center text-3xl font-semibold select-none">
+                {header}
+              </h1>
+            )}
+            {children}
+            {showsSocialLogin && (
+              <SocialLoginRender startupConfig={startupConfig} showPasskey={isLogin} />
+            )}
+            {statesConsentBelowProviders && <LegalConsent startupConfig={startupConfig} />}
+          </div>
+        </main>
+        {(!statesConsent || startupConfig?.interface?.authFooterLink != null) && (
+          <Footer startupConfig={startupConfig} />
+        )}
+      </div>
+      {isLogin && <AuthShowcase />}
     </div>
   );
 }

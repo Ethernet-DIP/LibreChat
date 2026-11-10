@@ -128,12 +128,11 @@ jest.mock('react-router-dom', () => ({
 }));
 
 test('renders login form', () => {
-  const { getByLabelText, getByRole } = setup();
+  const { getByLabelText, getByRole, queryByRole } = setup();
   expect(getByLabelText(/email/i)).toBeInTheDocument();
   expect(getByLabelText(/password/i)).toBeInTheDocument();
   expect(getByTestId(document.body, 'login-button')).toBeInTheDocument();
-  expect(getByRole('link', { name: /Sign up/i })).toBeInTheDocument();
-  expect(getByRole('link', { name: /Sign up/i })).toHaveAttribute('href', '/register');
+  expect(queryByRole('link', { name: /Sign up/i })).not.toBeInTheDocument();
   expect(getByRole('link', { name: /Continue with Google/i })).toBeInTheDocument();
   expect(getByRole('link', { name: /Continue with Google/i })).toHaveAttribute(
     'href',

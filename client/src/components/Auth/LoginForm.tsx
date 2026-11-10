@@ -100,8 +100,11 @@ const LoginForm: React.FC<TLoginFormProps> = ({ onSubmit, startupConfig, error, 
         method="POST"
         onSubmit={handleSubmit((data) => onSubmit(data))}
       >
-        <div className="mb-4">
-          <div className="relative">
+        <div
+          className="animate-auth-rise mb-4 motion-reduce:animate-none"
+          style={{ '--stagger': '150ms' } as React.CSSProperties}
+        >
+          <div className="focus-within:ring-surface-brand/25 relative rounded-xl transition-shadow duration-200 focus-within:ring-4 motion-reduce:transition-none">
             <Input
               colorTransition
               type="text"
@@ -127,8 +130,11 @@ const LoginForm: React.FC<TLoginFormProps> = ({ onSubmit, startupConfig, error, 
           </div>
           {renderError('email')}
         </div>
-        <div className="mb-2">
-          <div className="relative">
+        <div
+          className="animate-auth-rise mb-2 motion-reduce:animate-none"
+          style={{ '--stagger': '250ms' } as React.CSSProperties}
+        >
+          <div className="focus-within:ring-surface-brand/25 relative rounded-xl transition-shadow duration-200 focus-within:ring-4 motion-reduce:transition-none">
             <SecretInput
               colorTransition
               id="password"
@@ -153,7 +159,8 @@ const LoginForm: React.FC<TLoginFormProps> = ({ onSubmit, startupConfig, error, 
         {startupConfig.passwordResetEnabled && (
           <a
             href="/forgot-password"
-            className="text-accent-primary hover:text-accent-primary-hover hover:decoration-accent-primary-hover focus:text-accent-primary-hover focus:decoration-accent-primary-hover inline-flex p-1 text-sm font-medium underline decoration-transparent transition-all duration-200"
+            className="text-accent-primary hover:text-accent-primary-hover hover:decoration-accent-primary-hover focus:text-accent-primary-hover focus:decoration-accent-primary-hover animate-auth-rise inline-flex p-1 text-sm font-medium underline decoration-transparent transition-all duration-200 motion-reduce:animate-none"
+            style={{ '--stagger': '320ms' } as React.CSSProperties}
           >
             {localize('com_auth_password_forgot')}
           </a>
@@ -174,7 +181,10 @@ const LoginForm: React.FC<TLoginFormProps> = ({ onSubmit, startupConfig, error, 
           </div>
         )}
 
-        <div className="mt-6">
+        <div
+          className="animate-auth-rise mt-6 motion-reduce:animate-none"
+          style={{ '--stagger': '400ms' } as React.CSSProperties}
+        >
           <Button
             aria-label={localize('com_auth_continue')}
             data-testid="login-button"

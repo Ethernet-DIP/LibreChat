@@ -45,7 +45,7 @@ The defaults reproduce the scale those utilities had before, so a theme that nam
 changes nothing. The mapping lives in `tokens.css`, which the app stylesheet imports and
 `@librechat/client/theme.css` publishes, so a consumer's utilities are the app's.
 
-The stock families name Inter (`font-sans`, `font-theme-ui`) and Roboto Mono (`font-mono`), and
+The stock families name Nunito (`font-sans`, `font-theme-ui`) and Roboto Mono (`font-mono`), and
 the ClickHouse theme names Inconsolata. `theme.css` ships all three: `fonts.css` declares their
 `@font-face` rules against the package's own files by export (`@librechat/client/fonts/*`), and
 the host's bundler (Vite, webpack's css-loader, esbuild) resolves and emits them, exactly as the
