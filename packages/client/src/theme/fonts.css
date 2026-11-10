@@ -2,7 +2,7 @@
  * The font faces the stock theme and the bundled themes name, and the single source for them.
  *
  * `tokens.css` imports this file, so the app and a consumer of `@librechat/client/theme.css` load
- * the same files: Inter for `font-sans` and `font-theme-ui`, Roboto Mono for `font-mono`, and
+ * the same files: Nunito Variable for `font-sans` and `font-theme-ui` (Inter stays bundled for themes that name it), Roboto Mono for `font-mono`, and
  * Inconsolata, which the ClickHouse theme opts into. Each `url()` names the file by its package
  * export (`@librechat/client/fonts/*`) rather than by a relative path, and the host's bundler
  * resolves and emits it. A relative path would be read against the wrong file: Vite inlines this
@@ -11,6 +11,22 @@
  * renders in it, so a family no theme names costs nothing. Every family is under the SIL Open Font License 1.1, whose text ships beside the
  * files (`fonts/*-OFL.txt`), as the licence requires of any redistribution.
  */
+@font-face {
+  font-display: swap;
+  font-family: Nunito;
+  font-style: normal;
+  font-weight: 200 1000;
+  src: url('@librechat/client/fonts/Nunito-Variable.woff2') format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: Nunito;
+  font-style: italic;
+  font-weight: 200 1000;
+  src: url('@librechat/client/fonts/Nunito-Variable-Italic.woff2') format('woff2');
+}
+
 @font-face {
   font-display: swap;
   font-family: Inter;

@@ -165,7 +165,8 @@ const buttonVariantRecipe = cva(
         hyperlink: 'text-link underline-offset-4 hover:underline',
         submit: 'bg-surface-submit text-text-on-status hover:bg-surface-submit-hover',
         /** The primary action on the sign-in and sign-up screens, in the deployment's logo color. */
-        brand: 'bg-surface-brand text-text-on-status hover:bg-surface-brand-hover',
+        brand:
+          'bg-surface-brand text-text-on-status hover:-translate-y-0.5 hover:bg-surface-brand-hover active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none',
         /**
          * The toggle that heads a collapsible sidebar section, such as Chats,
          * Projects and Pinned. It stays a quiet label rather than a control:

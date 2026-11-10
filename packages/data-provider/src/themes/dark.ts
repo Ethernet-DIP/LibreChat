@@ -22,8 +22,8 @@ export const darkTheme: IThemeRGB = {
   'rgb-link-hover': '147 197 253', // #93c5fd (blue-300)
   'rgb-link-visited': '192 132 252', // #c084fc (purple-400)
   'rgb-link-prose': '236 236 236', // #ececec (gray-100, matching text-primary)
-  'rgb-accent-primary': '65 167 157', // #41a79d
-  'rgb-accent-primary-hover': '109 200 185', // #6dc8b9
+  'rgb-accent-primary': '120 165 240', // #78a5f0
+  'rgb-accent-primary-hover': '160 195 250', // #a0c3fa
 
   // Ring colors (not defined in dark mode, using default)
   'rgb-ring-primary': '89 89 89', // #595959 (gray-500)
@@ -56,8 +56,8 @@ export const darkTheme: IThemeRGB = {
   'rgb-surface-overlay': '0 0 0', // #000 (black)
   'rgb-surface-media-overlay': '0 0 0', // #000 (black, over the user's media in both modes)
   'rgb-text-on-media': '255 255 255', // #fff (white)
-  'rgb-surface-submit': '4 120 87', // #047857 (green-700)
-  'rgb-surface-submit-hover': '6 95 70', // #065f46 (green-800)
+  'rgb-surface-submit': '47 98 196', // #2f62c4 (MoE logo blue, dark)
+  'rgb-surface-submit-hover': '32 76 160', // #204ca0
   'rgb-surface-brand': '47 98 196', // #2f62c4 (MoE logo blue, lifted off the dark page)
   'rgb-surface-brand-hover': '32 76 160', // #204ca0
   'rgb-surface-destructive': '153 27 27', // #991b1b (red-800)

@@ -22,8 +22,8 @@ export const defaultTheme: IThemeRGB = {
   'rgb-link-hover': '29 78 216', // #1d4ed8 (blue-700)
   'rgb-link-visited': '147 51 234', // #9333ea (purple-600)
   'rgb-link-prose': '37 99 235', // #2563eb (blue-600, matching link)
-  'rgb-accent-primary': '18 110 107', // #126e6b
-  'rgb-accent-primary-hover': '10 79 83', // #0a4f53
+  'rgb-accent-primary': '32 76 160', // #204ca0 (MoE logo blue)
+  'rgb-accent-primary-hover': '24 58 125', // #183a7d
 
   // Ring colors
   'rgb-ring-primary': '89 89 89', // #595959 (gray-500)
@@ -56,8 +56,8 @@ export const defaultTheme: IThemeRGB = {
   'rgb-surface-overlay': '89 89 89', // #595959 (gray-500)
   'rgb-surface-media-overlay': '0 0 0', // #000 (black, over the user's media in both modes)
   'rgb-text-on-media': '255 255 255', // #fff (white)
-  'rgb-surface-submit': '4 120 87', // #047857 (green-700)
-  'rgb-surface-submit-hover': '6 95 70', // #065f46 (green-800)
+  'rgb-surface-submit': '32 76 160', // #204ca0 (MoE logo blue)
+  'rgb-surface-submit-hover': '24 58 125', // #183a7d
   'rgb-surface-brand': '32 76 160', // #204ca0 (MoE logo blue)
   'rgb-surface-brand-hover': '24 58 125', // #183a7d
   'rgb-surface-destructive': '185 28 28', // #b91c1c (red-700)
