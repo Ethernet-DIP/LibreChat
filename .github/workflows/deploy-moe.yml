@@ -1,0 +1,63 @@
+name: Deploy MoE server
+
+# Runs on the self-hosted runner installed on the deployment server.
+# Triggered by pushes to main (a merged PR is a push) or manually from the Actions tab.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never run two deploys at once; a newer merge waits for the current one.
+concurrency:
+  group: deploy-moe
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    # Only the fork that owns the server deploys; upstream/forks skip this job.
+    if: github.repository == 'Ethernet-DIP/LibreChat'
+    runs-on: [self-hosted, moe-prod]
+    timeout-minutes: 30
+    env:
+      # Set as a repository variable: Settings → Secrets and variables → Actions → Variables.
+      DEPLOY_DIR: ${{ vars.MOE_DEPLOY_DIR }}
+    steps:
+      - name: Check deploy directory
+        run: |
+          test -n "$DEPLOY_DIR" || { echo "MOE_DEPLOY_DIR is not set"; exit 1; }
+          test -f "$DEPLOY_DIR/.env" || { echo "$DEPLOY_DIR has no .env"; exit 1; }
+
+      - name: Pull main
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          git fetch origin main
+          git checkout main
+          # Fails instead of overwriting if someone edited tracked files on the server.
+          git merge --ff-only origin/main
+          git log -1 --oneline
+
+      - name: Build
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          npm ci
+          npm run frontend
+
+      - name: Restart containers
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          docker compose up -d --remove-orphans
+          docker compose restart api
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3080/health || true)
+            if [ "$code" = "200" ]; then echo "Healthy"; exit 0; fi
+            sleep 5
+          done
+          echo "App did not become healthy"
+          docker compose -f "$DEPLOY_DIR/docker-compose.yml" logs --tail=100 api || true
+          exit 1
