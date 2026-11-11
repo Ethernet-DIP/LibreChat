@@ -140,10 +140,17 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
 
   return (
     <div
-      className={`relative flex h-full transform-gpu flex-col items-center justify-center overflow-hidden pb-16 transition-all duration-200 ${centerFormOnLanding ? 'max-h-full sm:max-h-0' : 'max-h-full'} ${getDynamicMargin}`}
+      className={`relative flex h-full transform-gpu flex-col items-center justify-center pb-16 transition-all duration-200 ${centerFormOnLanding ? 'max-h-full sm:max-h-0' : 'max-h-full'} ${getDynamicMargin}`}
     >
-      <AuthPattern className="text-surface-brand -z-10 opacity-5" />
-      <div className="bg-surface-brand/10 pointer-events-none absolute -top-24 -z-10 size-[28rem] rounded-full blur-3xl" />
+      {/* The welcome content overflows this box while the composer is centered
+          (`max-h-0`), so the decoration clips itself instead of the box clipping the content. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+      >
+        <AuthPattern className="text-surface-brand opacity-5" />
+        <div className="bg-surface-brand/10 absolute -top-24 size-[28rem] rounded-full blur-3xl" />
+      </div>
       <div ref={contentRef} className="flex flex-col items-center gap-0 p-2">
         <div
           className={`flex ${textHasMultipleLines ? 'flex-col' : 'flex-col md:flex-row'} items-center justify-center gap-2`}
