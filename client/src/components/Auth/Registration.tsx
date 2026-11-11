@@ -2,8 +2,8 @@ import React, { useContext, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { loginPage } from 'librechat-data-provider';
 import { Turnstile } from '@marsidev/react-turnstile';
-import { useNavigate, useOutletContext, useLocation } from 'react-router-dom';
 import { useRegisterUserMutation } from 'librechat-data-provider/react-query';
+import { Navigate, useNavigate, useOutletContext, useLocation } from 'react-router-dom';
 import {
   ThemeContext,
   SecretInput,
@@ -124,6 +124,11 @@ const Registration: React.FC = () => {
       </div>
     );
   };
+
+  /* An invite still opens this page while open sign-up is off; the server honors its token. */
+  if (startupConfig?.registrationEnabled === false && !token) {
+    return <Navigate to={{ pathname: '/login', search: location.search }} replace />;
+  }
 
   return (
     <>

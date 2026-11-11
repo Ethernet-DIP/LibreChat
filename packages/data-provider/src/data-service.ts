@@ -85,6 +85,12 @@ export function updateLangfuseConnection(
   return request.put(endpoints.adminLangfuseConnection(), payload);
 }
 
+export function createAdminUser(
+  payload: t.TAdminCreateUserRequest,
+): Promise<t.TAdminCreateUserResponse> {
+  return request.post(endpoints.adminUsers(), payload);
+}
+
 export function testLangfuseConnection(
   payload: t.TLangfuseConnectionTestRequest,
 ): Promise<t.TLangfuseConnectionTestResponse> {
@@ -1646,10 +1652,6 @@ export function listRoles(): Promise<q.ListRolesResponse> {
 
 export function listAdminUsers(params: q.AdminUsersParams = {}): Promise<q.AdminUsersResponse> {
   return request.get(endpoints.adminUsers(params));
-}
-
-export function createAdminUser(body: q.AdminCreateUserBody): Promise<q.AdminCreateUserResponse> {
-  return request.post(endpoints.adminUsers(), body);
 }
 
 export function updateAdminUser(

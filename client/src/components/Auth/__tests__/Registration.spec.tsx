@@ -306,3 +306,41 @@ test('says nothing when every configured policy url is blank', () => {
 
   expect(queryByText(/By continuing/i)).not.toBeInTheDocument();
 });
+
+describe('when open registration is disabled', () => {
+  const disabledConfig = {
+    ...mockStartupConfig,
+    data: { ...mockStartupConfig.data, registrationEnabled: false },
+  };
+
+  function renderAt(path: string) {
+    const mockUseRegisterUserMutation = jest.spyOn(mockDataProvider, 'useRegisterUserMutation');
+    //@ts-ignore - we don't need all parameters of the mutation result
+    mockUseRegisterUserMutation.mockReturnValue({ mutate: jest.fn(), isSuccess: false });
+    jest.spyOn(reactRouter, 'useOutletContext').mockReturnValue({
+      startupConfig: disabledConfig.data,
+    });
+    window.history.pushState({}, '', path);
+    return render(
+      <I18nextProvider i18n={i18n}>
+        <reactRouter.Routes>
+          <reactRouter.Route path="/register" element={<Registration />} />
+          <reactRouter.Route path="/login" element={<div data-testid="login-page" />} />
+        </reactRouter.Routes>
+      </I18nextProvider>,
+    );
+  }
+
+  test('redirects /register to /login', () => {
+    renderAt('/register');
+    expect(screen.getByTestId('login-page')).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/login');
+    expect(screen.queryByRole('form', { name: /Registration form/i })).not.toBeInTheDocument();
+  });
+
+  test('keeps the form for an invite link', () => {
+    renderAt('/register?token=invite-token');
+    expect(screen.getByRole('form', { name: /Registration form/i })).toBeInTheDocument();
+    expect(screen.queryByTestId('login-page')).not.toBeInTheDocument();
+  });
+});

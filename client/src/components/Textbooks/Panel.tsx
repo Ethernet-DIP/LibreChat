@@ -1,6 +1,14 @@
 import { useId } from 'react';
 import { BookOpen, Send, X } from 'lucide-react';
-import { Button, CheckboxGlyph, Input, Label, Spinner } from '@librechat/client';
+import {
+  Button,
+  CheckboxGlyph,
+  Dropdown,
+  Input,
+  InputCombobox,
+  Label,
+  Spinner,
+} from '@librechat/client';
 import type { LessonDetails } from './state';
 import type { Textbook } from './model';
 import PanelHeader from '~/components/ui/PanelHeader';
@@ -60,12 +68,25 @@ export default function TextbookPanel({
   );
   const selected = files.filter((file) => selectedIds.has(file.file_id));
   const selectedCount = selected.length;
+  const subjects = [
+    localize('com_ui_textbooks_subject_english'),
+    localize('com_ui_textbooks_subject_mathematics'),
+    localize('com_ui_textbooks_subject_biology'),
+    localize('com_ui_textbooks_subject_chemistry'),
+    localize('com_ui_textbooks_subject_physics'),
+  ];
+  const grades = [9, 10, 11, 12].map((grade) =>
+    localize('com_ui_textbooks_grade_option', { 0: grade }),
+  );
   const canGenerate =
     !busy &&
     !uploading &&
     selectedCount > 0 &&
     selected.every((file) => canUseTextbook(file, canAttach, canSearch)) &&
-    details.topic.trim().length > 0;
+    details.subject.trim().length > 0 &&
+    details.unit.trim().length > 0 &&
+    details.section.trim().length > 0 &&
+    details.grade.length > 0;
 
   const renderLibrary = () => {
     if (loading && files.length === 0) {
@@ -212,12 +233,25 @@ export default function TextbookPanel({
           {localize('com_ui_textbooks_lesson')}
         </h3>
         <div className="space-y-1.5">
-          <Label htmlFor={`${id}-topic`}>{localize('com_ui_textbooks_topic')}</Label>
+          <Label htmlFor={`${id}-subject`}>{localize('com_ui_textbooks_subject')}</Label>
+          <InputCombobox
+            id={`${id}-subject`}
+            variant="field"
+            placeholder={localize('com_ui_textbooks_subject_placeholder')}
+            options={subjects}
+            value={details.subject}
+            onChange={(subject) => onDetails({ ...details, subject })}
+            onBlur={() => onDetails({ ...details, subject: details.subject.trim() })}
+            required
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`${id}-unit`}>{localize('com_ui_textbooks_unit')}</Label>
           <Input
-            id={`${id}-topic`}
-            value={details.topic}
-            onChange={(event) => onDetails({ ...details, topic: event.target.value })}
-            placeholder={localize('com_ui_textbooks_topic_placeholder')}
+            id={`${id}-unit`}
+            value={details.unit}
+            onChange={(event) => onDetails({ ...details, unit: event.target.value })}
+            placeholder={localize('com_ui_textbooks_unit_placeholder')}
             required
           />
         </div>
@@ -228,16 +262,20 @@ export default function TextbookPanel({
             value={details.section}
             onChange={(event) => onDetails({ ...details, section: event.target.value })}
             placeholder={localize('com_ui_textbooks_section_placeholder')}
+            required
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor={`${id}-grade`}>{localize('com_ui_textbooks_grade')}</Label>
-            <Input
-              id={`${id}-grade`}
-              value={details.grade}
-              onChange={(event) => onDetails({ ...details, grade: event.target.value })}
+            <Label id={`${id}-grade`}>{localize('com_ui_textbooks_grade')}</Label>
+            <Dropdown
+              variant="field"
+              sameWidth
+              aria-labelledby={`${id}-grade`}
               placeholder={localize('com_ui_textbooks_grade_placeholder')}
+              options={grades}
+              value={details.grade}
+              onChange={(grade) => onDetails({ ...details, grade })}
             />
           </div>
           <div className="space-y-1.5">

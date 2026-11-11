@@ -9,7 +9,11 @@ import type {
   AdminUserSearchResult,
   UserDeleteResult,
 } from '@librechat/data-schemas';
-import type { TCheckpointerConfig } from 'librechat-data-provider';
+import type {
+  TAdminCreateUserErrorCode,
+  TAdminCreateUserResponse,
+  TCheckpointerConfig,
+} from 'librechat-data-provider';
 import type { FilterQuery } from 'mongoose';
 import type { Response } from 'express';
 import type { UserGenerationControl } from '~/user/generations';
@@ -69,33 +73,16 @@ export interface AdminErasureContext {
   checkpointer?: TCheckpointerConfig;
 }
 
-/** The account an admin supplies to `createUser`. */
-export interface AdminCreateUserInput {
-  email: string;
-  name: string;
-  username: string;
-  password: string;
-  confirm_password: string;
-}
-
-/** What the shared registration service answers; `userCreated` separates a new account from
- *  the identical 200 it returns when the email is already in use. */
-export interface AdminRegisterResult {
+/** The outcome of the shared registration flow, which validates input and hashes the password. */
+export interface RegisterUserResult {
   status: number;
-  message?: string;
+  message: string;
+  /** Separates a new account from the identical 200 returned for an email already in use. */
   userCreated?: boolean;
+  userId?: string;
 }
 
 export interface AdminUsersDeps {
-  /** The shared registration service, called with the admin-chosen role and a verified email. */
-  registerUser?: (
-    user: AdminCreateUserInput,
-    additionalData: { role: string; emailVerified: boolean },
-  ) => Promise<AdminRegisterResult>;
-  /** Whether a role of exactly this name exists in the caller's partition. */
-  roleExists?: (name: string) => Promise<boolean>;
-  recordAuditEntry?: RecordAuditEntry;
-  auditFailClosed?: boolean;
   /** Persists profile, password and `disabled` changes; the write bumps `updatedAt`, which retires
    *  the cached auth document. */
   updateUser?: (userId: string, data: Partial<IUser>) => Promise<IUser | null>;
@@ -158,6 +145,12 @@ export interface AdminUsersDeps {
    * keep authentication material and can collide with a later registration.
    */
   deletePasskeysByUser: (userId: string) => Promise<number>;
+  registerUser: (
+    user: Record<string, unknown>,
+    additionalData: { role: string; emailVerified: boolean },
+  ) => Promise<RegisterUserResult>;
+  recordAuditEntry?: RecordAuditEntry;
+  auditFailClosed?: boolean;
 }
 
 export function createAdminUsersHandlers(deps: AdminUsersDeps): {
@@ -167,12 +160,6 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps): {
   createUser: (req: ServerRequest, res: Response) => Promise<Response>;
   updateUser: (req: ServerRequest, res: Response) => Promise<Response>;
 } {
-  const emitAudit = createAdminAuditEmitter({
-    recordAuditEntry: deps.recordAuditEntry,
-    failClosed: deps.auditFailClosed,
-    logPrefix: '[adminUsers]',
-  });
-
   const {
     findUsers,
     countUsers,
@@ -195,7 +182,16 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps): {
     quiesceUserSchedules,
     restoreUserSchedulesFromDeletion,
     generationJobs,
+    registerUser,
+    recordAuditEntry,
+    auditFailClosed,
   } = deps;
+
+  const emitAudit = createAdminAuditEmitter({
+    recordAuditEntry,
+    failClosed: auditFailClosed,
+    logPrefix: '[adminUsers]',
+  });
 
   async function listUsersHandler(req: ServerRequest, res: Response) {
     try {
@@ -273,86 +269,55 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps): {
     }
   }
 
-  /** Stable codes the client maps to localized copy; the body never carries service text. */
-  type CreateUserError =
-    | 'invalid_details'
-    | 'invalid_role'
-    | 'email_taken'
-    | 'domain_not_allowed'
-    | 'unavailable';
-
-  const createUserFailure = (res: Response, status: number, code: CreateUserError) =>
-    res.status(status).json({ error: code, code });
-
+  /**
+   * Accounts made here are always standard users: this capability manages users, not roles, so
+   * any `role` in the body is ignored rather than letting it grant more than its holder was given.
+   * An admin vouches for the address, so no verification email is sent.
+   */
   async function createUserHandler(req: ServerRequest, res: Response) {
+    const fail = (status: number, code: TAdminCreateUserErrorCode) =>
+      res.status(status).json({ error: code, code });
+
     try {
-      const { registerUser, roleExists } = deps;
-      if (!registerUser || !roleExists) {
-        return createUserFailure(res, 501, 'unavailable');
-      }
-      const body = (req.body ?? {}) as Record<string, unknown>;
-      const email = typeof body.email === 'string' ? body.email.trim() : '';
-      const name = typeof body.name === 'string' ? body.name.trim() : '';
-      const password = typeof body.password === 'string' ? body.password : '';
-      const role =
-        typeof body.role === 'string' && body.role.trim() ? body.role.trim() : SystemRoles.USER;
-      const rawUsername = typeof body.username === 'string' ? body.username.trim() : '';
-      const username = rawUsername || email.split('@')[0];
-
-      if (!email.includes('@') || email.length > 120 || !name || !password || !username) {
-        return createUserFailure(res, 400, 'invalid_details');
-      }
-      if (role !== SystemRoles.USER && !(await roleExists(role))) {
-        return createUserFailure(res, 400, 'invalid_role');
-      }
-
+      const { name, username, email, password } = (req.body ?? {}) as Record<string, unknown>;
       const result = await registerUser(
-        { email, name, username, password, confirm_password: password },
-        { role, emailVerified: true },
+        { name, username, email, password, confirm_password: password },
+        { role: SystemRoles.USER, emailVerified: true },
       );
-      if (result.status === 403) {
-        return createUserFailure(res, 403, 'domain_not_allowed');
-      }
-      if (result.status === 404) {
-        return createUserFailure(res, 400, 'invalid_details');
-      }
-      if (result.status !== 200) {
-        return res.status(500).json({ error: 'Failed to create user' });
-      }
-      if (result.userCreated !== true) {
-        return createUserFailure(res, 409, 'email_taken');
+
+      if (result.userCreated === true && result.userId != null) {
+        const createdEmail = String(email).trim().toLowerCase();
+        await emitAudit(req, {
+          action: 'user.created',
+          target: { type: 'user', id: result.userId, name: createdEmail },
+          metadata: { role: SystemRoles.USER },
+        });
+        const body: TAdminCreateUserResponse = {
+          user: { id: result.userId, email: createdEmail, role: SystemRoles.USER },
+        };
+        return res.status(201).json(body);
       }
 
-      const [created] = await findUsers({ email: email.toLowerCase() }, USER_LIST_FIELDS, {
-        limit: 1,
-      });
-      const userId = created?._id?.toString() ?? '';
-      await emitAudit(req, {
-        action: 'user.created',
-        severity: role === SystemRoles.ADMIN ? 'critical' : 'info',
-        target: { type: 'user', id: userId, name: created?.name ?? name },
-        metadata: { role },
-      });
-      const user: AdminUserListItem = {
-        id: userId,
-        name: created?.name ?? name,
-        username: created?.username ?? username,
-        email: created?.email ?? email,
-        avatar: created?.avatar ?? '',
-        role: created?.role ?? role,
-        provider: created?.provider ?? 'local',
-        createdAt: created?.createdAt?.toISOString(),
-        updatedAt: created?.updatedAt?.toISOString(),
-      };
-      return res.status(201).json({ user });
+      switch (result.status) {
+        case 200:
+          return fail(409, 'email_in_use');
+        case 403:
+          return fail(403, 'email_domain_not_allowed');
+        case 404:
+          return fail(400, 'invalid_input');
+        default:
+          return fail(500, 'create_failed');
+      }
     } catch (error) {
       logger.error('[adminUsers] createUser error:', getSafeErrorMetadata(error));
-      return res.status(500).json({ error: 'Failed to create user' });
+      return fail(500, 'create_failed');
     }
   }
 
   type UpdateUserError =
-    | CreateUserError
+    | 'invalid_details'
+    | 'email_taken'
+    | 'unavailable'
     | 'nothing_to_update'
     | 'email_locked'
     | 'password_unsupported'
@@ -661,8 +626,8 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps): {
   return {
     listUsers: listUsersHandler,
     searchUsers: searchUsersHandler,
-    deleteUser: deleteUserHandler,
     createUser: createUserHandler,
+    deleteUser: deleteUserHandler,
     updateUser: updateUserHandler,
   };
 }

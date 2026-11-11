@@ -3,7 +3,8 @@ import { atomFamily } from 'jotai/utils';
 import { createStorageAtom } from '~/store/jotai-utils';
 
 export type LessonDetails = {
-  topic: string;
+  subject: string;
+  unit: string;
   section: string;
   grade: string;
   duration: string;
@@ -14,7 +15,8 @@ export const desktopOpen = createStorageAtom('textbooks-panel-open', true);
 export const mobileOpen = atom(false);
 export const search = atom('');
 export const details = atom<LessonDetails>({
-  topic: '',
+  subject: '',
+  unit: '',
   section: '',
   grade: '',
   duration: '40',

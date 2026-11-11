@@ -34,15 +34,30 @@ export const useSetUserRoleMutation = (): UseMutationResult<
   );
 };
 
+export type CreateUserVars = t.TAdminCreateUserRequest & { role?: string };
+
+/** The create endpoint always makes a standard user, so a higher role is a second, separately
+ *  authorized step through the role-members API. */
 export const useCreateUserMutation = (): UseMutationResult<
-  t.AdminCreateUserResponse,
+  t.TAdminCreateUserResponse,
   t.TError | undefined,
-  t.AdminCreateUserBody
+  CreateUserVars
 > => {
   const queryClient = useQueryClient();
-  return useMutation((body: t.AdminCreateUserBody) => dataService.createAdminUser(body), {
-    onSuccess: () => queryClient.invalidateQueries([QueryKeys.adminUsers]),
-  });
+  return useMutation(
+    async ({ role, ...body }: CreateUserVars) => {
+      const created = await dataService.createAdminUser(body);
+      if (role && role !== SystemRoles.USER) {
+        try {
+          await dataService.addAdminRoleMember(role, created.user.id);
+        } catch {
+          throw { response: { data: { code: 'role_failed' } } } as t.TError;
+        }
+      }
+      return created;
+    },
+    { onSettled: () => queryClient.invalidateQueries([QueryKeys.adminUsers]) },
+  );
 };
 
 export type UpdateUserVars = { userId: string } & t.AdminUpdateUserBody;

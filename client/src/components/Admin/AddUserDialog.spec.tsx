@@ -57,16 +57,14 @@ describe('AddUserDialog', () => {
     fill();
     fireEvent.click(screen.getByRole('button', { name: /add user/i }));
     await waitFor(() =>
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ email: 'new@x.org', role: 'USER' }),
-      ),
+      expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ email: 'new@x.org' })),
     );
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
     expect(mockShowToast).toHaveBeenCalled();
   });
 
   it('shows a specific message when the email is taken', async () => {
-    mockCreate.mockRejectedValue({ response: { status: 409, data: { code: 'email_taken' } } });
+    mockCreate.mockRejectedValue({ response: { status: 409, data: { code: 'email_in_use' } } });
     renderDialog();
     fill();
     fireEvent.click(screen.getByRole('button', { name: /add user/i }));

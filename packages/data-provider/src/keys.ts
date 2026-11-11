@@ -150,6 +150,7 @@ export enum MutationKeys {
   updateFavorites = 'updateFavorites',
   /** Pinned-section display order write, keyed for the same reason. */
   updatePinnedOrder = 'updatePinnedOrder',
+  createAdminUser = 'createAdminUser',
   updateLangfuseConnection = 'updateLangfuseConnection',
   testLangfuseConnection = 'testLangfuseConnection',
   updateLangfusePromptSync = 'updateLangfusePromptSync',

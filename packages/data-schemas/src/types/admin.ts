@@ -1373,6 +1373,7 @@ export const AUDIT_ACTION_CATEGORY: Record<AuditAction, AuditCategory> = {
   'audit.read': 'audit',
   'audit.exported': 'audit',
   'audit.purged': 'audit',
+  'user.created': 'user',
 };
 
 /** Result of the audited operation. Kept first-class instead of being encoded

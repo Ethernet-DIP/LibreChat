@@ -18,6 +18,7 @@ const {
   cancelAgentTriggerUserPurge,
   purgeAgentTriggerDeliveriesForUser,
 } = require('~/server/services/Agents/triggers');
+const { registerUser } = require('~/server/services/AuthService');
 const { processDeleteRequest } = require('~/server/services/Files/process');
 const { invalidateCachedTools } = require('~/server/services/Config/getCachedTools');
 const { getMCPManager, getMCPServersRegistry } = require('~/config');
@@ -27,7 +28,6 @@ const {
   quiesceUserSchedules,
   restoreUserSchedulesFromDeletion,
 } = require('~/server/services/Schedules');
-const { registerUser } = require('~/server/services/AuthService');
 const db = require('~/models');
 const {
   getAppConfig,
@@ -63,7 +63,6 @@ const handlers = createAdminUsersHandlers({
   updateUser: db.updateUser,
   hashPassword: hashSecret,
   minPasswordLength: parseInt(process.env.MIN_PASSWORD_LENGTH, 10) || 8,
-  roleExists: async (name) => (await db.getPartitionRole(name)) != null,
   recordAuditEntry: db.recordAuditEntry,
   auditFailClosed: process.env.AUDIT_LOG_FAIL_CLOSED === 'true',
   findUsers: db.findUsers,

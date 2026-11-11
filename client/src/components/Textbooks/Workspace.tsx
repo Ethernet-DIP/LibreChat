@@ -177,7 +177,10 @@ function Library({ disabled }: { disabled: boolean }) {
       chat.filesLoading ||
       selected.length === 0 ||
       selected.some((file) => !canUseTextbook(file, canAttach, canSearch)) ||
-      !details.topic.trim() ||
+      !details.subject.trim() ||
+      !details.unit.trim() ||
+      !details.section.trim() ||
+      !details.grade ||
       !Number.isSafeInteger(duration) ||
       duration < 1
     ) {
@@ -186,9 +189,10 @@ function Library({ disabled }: { disabled: boolean }) {
     setError(null);
     const text = localize('com_ui_textbooks_prompt', {
       books: selected.map((file) => file.filename).join(', '),
-      topic: details.topic.trim(),
-      section: details.section.trim() || localize('com_ui_textbooks_section_unspecified'),
-      grade: details.grade.trim() || localize('com_ui_textbooks_infer_grade'),
+      subject: details.subject.trim(),
+      unit: details.unit.trim(),
+      section: details.section.trim(),
+      grade: details.grade,
       duration,
       date: details.date || localize('com_ui_textbooks_date_unspecified'),
       instructions:

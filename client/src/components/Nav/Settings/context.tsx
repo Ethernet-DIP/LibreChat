@@ -3,6 +3,7 @@ import { useRecoilValue } from 'recoil';
 import {
   AgentCapabilities,
   Permissions,
+  SystemRoles,
   PermissionTypes,
   isTwoFactorPolicyProvider,
 } from 'librechat-data-provider';
@@ -38,6 +39,7 @@ export function useSettingsContext(): SettingsContextValue {
   const langfuseConnectionAccess = startupConfig?.langfuseConnectionAccess === true;
   const langfusePromptSyncAccess = startupConfig?.langfusePromptSyncAccess === true;
   const adminPanelURL = startupConfig?.adminPanelURL ?? '';
+  const isAdmin = user?.role === SystemRoles.ADMIN;
   const isLocalProvider = user?.provider === 'local';
   const emailEnabled = startupConfig?.emailEnabled === true;
   const allowEmailChange = startupConfig?.allowEmailChange === true;
@@ -98,6 +100,7 @@ export function useSettingsContext(): SettingsContextValue {
       langfuseConnectionAccess,
       langfusePromptSyncAccess,
       adminPanelURL,
+      isAdmin,
       replyTabBadgeAllowed,
       replyNotificationsAllowed,
       replyNotificationSoundAllowed,
@@ -126,6 +129,7 @@ export function useSettingsContext(): SettingsContextValue {
       langfuseConnectionAccess,
       langfusePromptSyncAccess,
       adminPanelURL,
+      isAdmin,
       replyTabBadgeAllowed,
       replyNotificationsAllowed,
       replyNotificationSoundAllowed,

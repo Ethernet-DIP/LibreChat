@@ -3,6 +3,10 @@ import type { TranslationKeys } from '~/hooks';
 /** Maps the stable codes the admin user endpoints return to localized copy. */
 export const adminUserErrorKeys: Record<string, TranslationKeys> = {
   invalid_details: 'com_ui_admin_users_err_invalid_details',
+  email_in_use: 'com_ui_admin_users_err_email_taken',
+  email_domain_not_allowed: 'com_ui_admin_users_err_domain',
+  invalid_input: 'com_ui_admin_users_err_invalid_details',
+  role_failed: 'com_ui_admin_users_err_role_failed',
   email_taken: 'com_ui_admin_users_err_email_taken',
   domain_not_allowed: 'com_ui_admin_users_err_domain',
   invalid_role: 'com_ui_admin_users_err_role',
