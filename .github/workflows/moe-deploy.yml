@@ -1,0 +1,68 @@
+name: MoE build and deploy
+
+# PRs into main must build. A merge to main builds again and, if that passes,
+# deploys on the ministry server through a self-hosted runner (see deploy/README.md).
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: moe-deploy-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build packages and client
+        run: npm run frontend
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: [self-hosted, moe-deploy]
+    timeout-minutes: 45
+    # One deploy at a time; a newer merge waits instead of cancelling a half-finished one.
+    concurrency:
+      group: moe-deploy-production
+      cancel-in-progress: false
+    env:
+      DEPLOY_DIR: ${{ vars.DEPLOY_DIR || '/opt/librechat' }}
+    steps:
+      # The persistent clone holds .env, librechat.yaml and the data folders, which are
+      # untracked, so a hard reset updates the code and leaves them alone.
+      - name: Update the code
+        run: |
+          cd "$DEPLOY_DIR"
+          git fetch origin main
+          git reset --hard "$GITHUB_SHA"
+      - name: Build and restart
+        run: |
+          cd "$DEPLOY_DIR"
+          docker compose -f docker-compose.yml -f deploy/docker-compose.moe.yml up -d --build --remove-orphans
+      - name: Wait for the app
+        run: |
+          cd "$DEPLOY_DIR"
+          PORT=$(grep -E '^PORT=' .env | cut -d= -f2); PORT=${PORT:-3080}
+          for i in $(seq 1 30); do
+            curl -fsS "http://localhost:${PORT}/health" >/dev/null && echo healthy && exit 0
+            sleep 5
+          done
+          docker compose logs --tail=80 api
+          exit 1
+      - name: Clean old images
+        if: success()
+        run: docker image prune -f
