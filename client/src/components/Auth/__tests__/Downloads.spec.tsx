@@ -6,9 +6,12 @@ const config = (appDownloads?: Record<string, string>) =>
   ({ interface: { appDownloads } }) as unknown as TStartupConfig;
 
 describe('Downloads', () => {
-  it('renders nothing when no link is configured', () => {
-    const { container } = render(<Downloads startupConfig={config()} />);
-    expect(container).toBeEmptyDOMElement();
+  it('shows every platform disabled when no link is configured', () => {
+    render(<Downloads startupConfig={config()} />);
+    expect(screen.queryByRole('link')).toBeNull();
+    for (const name of [/desktop/i, /android/i, /ios/i]) {
+      expect(screen.getByRole('button', { name })).toBeDisabled();
+    }
   });
 
   it('renders a button only for each configured platform', () => {
@@ -22,11 +25,12 @@ describe('Downloads', () => {
       'https://x.org/app.dmg',
     );
     expect(screen.getByRole('link', { name: /ios/i })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /android/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /android/i })).toBeDisabled();
   });
 
   it('drops unsafe links', () => {
     render(<Downloads startupConfig={config({ android: 'javascript:alert(1)' })} />);
     expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.getByRole('button', { name: /android/i })).toBeDisabled();
   });
 });
