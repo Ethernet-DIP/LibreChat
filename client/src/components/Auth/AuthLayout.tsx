@@ -109,7 +109,9 @@ function AuthLayout({
               <img
                 src="assets/moe-logo.jpg"
                 className="animate-logo-float relative size-24 rounded-full object-contain shadow-lg motion-reduce:animate-none"
-                alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'LibreChat' })}
+                alt={localize('com_ui_logo', {
+                  0: startupConfig?.appTitle ?? 'MoE Teacher Assistant Agent',
+                })}
               />
             </div>
           </BlinkAnimation>

@@ -18,7 +18,7 @@ import { useLocalize } from '~/hooks';
 
 const defaultInterface = getConfigDefaults().interface;
 
-function ModelSelectorContent() {
+function ModelSelectorContent({ fixed = false }: { fixed?: boolean }) {
   const localize = useLocalize();
   const modelSelectorHint = useShortcutHint('openModelSelector', localize('com_ui_select_model'));
   const modelSelectorAriaKey = useShortcutAriaKey('openModelSelector');
@@ -87,6 +87,22 @@ function ModelSelectorContent() {
     />
   );
 
+  if (fixed) {
+    return (
+      <div
+        data-testid="model-selector-fixed"
+        className="border-border-chrome bg-presentation text-text-primary rounded-theme-control my-1 flex h-9 max-w-[60vw] items-center gap-2 border px-3 py-2 text-sm sm:max-w-xs"
+      >
+        {selectedIcon && React.isValidElement(selectedIcon) && (
+          <div className="flex shrink-0 items-center justify-center overflow-hidden">
+            {selectedIcon}
+          </div>
+        )}
+        <span className="truncate text-start">{selectedDisplayValue}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex max-w-[60vw] min-w-0 flex-col items-center gap-2 sm:max-w-xs">
       <Menu
@@ -138,10 +154,13 @@ export default function ModelSelector({ startupConfig }: ModelSelectorProps) {
     return null;
   }
 
+  /** One enforced spec with the picker switched off: show it as a plain label, not a menu. */
+  const fixed = interfaceConfig.modelSelect === false && modelSpecs.length === 1;
+
   return (
     <ModelSelectorChatProvider>
       <ModelSelectorProvider startupConfig={startupConfig}>
-        <ModelSelectorContent />
+        <ModelSelectorContent fixed={fixed} />
       </ModelSelectorProvider>
     </ModelSelectorChatProvider>
   );

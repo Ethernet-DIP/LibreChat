@@ -9,9 +9,7 @@ import { useGetEndpointsQuery, useGetStartupConfig } from '~/data-provider';
 import { getIconEndpoint, getEntity, getModelSpec } from '~/utils';
 import { useLocalize, useAuthContext, useGreeting } from '~/hooks';
 import { useChatSettings } from '~/Providers/ChatSettingsContext';
-import AgentContact from '~/components/Agents/AgentContact';
 import ConvoIcon from '~/components/Endpoints/ConvoIcon';
-import AuthPattern from '~/components/Auth/AuthPattern';
 
 const containerClassName =
   'relative flex h-full items-center justify-center rounded-full bg-presentation text-text-primary';
@@ -140,10 +138,8 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
 
   return (
     <div
-      className={`relative flex h-full transform-gpu flex-col items-center justify-center overflow-hidden pb-16 transition-all duration-200 ${centerFormOnLanding ? 'max-h-full sm:max-h-0' : 'max-h-full'} ${getDynamicMargin}`}
+      className={`relative flex h-full transform-gpu flex-col items-center justify-center pb-16 transition-all duration-200 ${centerFormOnLanding ? 'max-h-full sm:max-h-0' : 'max-h-full'} ${getDynamicMargin}`}
     >
-      <AuthPattern className="text-surface-brand -z-10 opacity-5" />
-      <div className="bg-surface-brand/10 pointer-events-none absolute -top-24 -z-10 size-[28rem] rounded-full blur-3xl" />
       <div ref={contentRef} className="flex flex-col items-center gap-0 p-2">
         <div
           className={`flex ${textHasMultipleLines ? 'flex-col' : 'flex-col md:flex-row'} items-center justify-center gap-2`}
@@ -218,12 +214,6 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
               : `animate-fadeIn mt-4 max-w-md text-center text-sm font-normal ${isTemporary ? 'text-text-secondary' : 'text-text-primary'}`
           }
         />
-        {selectedAgent && !isTemporary && (
-          <AgentContact
-            agent={selectedAgent}
-            className="animate-fadeIn mt-2 max-w-md justify-center text-center text-sm"
-          />
-        )}
       </div>
     </div>
   );

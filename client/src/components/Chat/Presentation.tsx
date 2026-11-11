@@ -11,6 +11,7 @@ import UndockedArtifacts from '~/components/Artifacts/UndockedArtifacts';
 import { artifactsUndocked } from '~/components/Artifacts/state';
 import TextbookWorkspace from '~/components/Textbooks/Workspace';
 import { EditorProvider, ArtifactsProvider } from '~/Providers';
+import AuthPattern from '~/components/Auth/AuthPattern';
 import { SidePanelGroup } from '~/components/SidePanel';
 import AppChatSurface from '~/components/Chat/Surface';
 import { useGetStartupConfig } from '~/data-provider';
@@ -129,7 +130,8 @@ export default function Presentation({
   const panelElement = (isUndocked ? null : artifactsElement) ?? subagentElement;
 
   return (
-    <DragDropWrapper className="bg-surface-canvas relative flex w-full grow overflow-hidden">
+    <DragDropWrapper className="bg-surface-canvas relative isolate flex w-full grow overflow-hidden">
+      <AuthPattern className="text-surface-brand -z-10 opacity-5" />
       <AppChatSurface>
         {/* The editor buffer belongs to the pane's session, not to the window
             it happens to be in: hoisted, an undock keeps unsaved edits. */}

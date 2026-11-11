@@ -9,22 +9,23 @@ jest.mock('~/data-provider', () => ({
 }));
 
 const mockTranslations: Record<string, string> = {
-  com_ui_latest_footer: 'Every AI for Everyone.',
+  com_ui_footer_copyright: '© {{0}} Ministry of Education',
   com_ui_privacy_policy: 'Privacy policy',
   com_ui_terms_of_service: 'Terms of service',
 };
 
 jest.mock('~/hooks', () => ({
-  useLocalize: () => (key: string) => mockTranslations[key] ?? key,
+  useLocalize: () => (key: string, vars?: Record<string, string>) =>
+    (mockTranslations[key] ?? key).replace('{{0}}', vars?.[0] ?? ''),
 }));
 
 describe('Footer', () => {
-  test('opens the default LibreChat site link in a new tab', () => {
+  test('shows the ministry name and the current year by default', () => {
     render(<Footer startupConfig={null} />);
-    const link = screen.getByRole('link', { name: /LibreChat/ });
-    expect(link).toHaveAttribute('href', 'https://librechat.ai');
-    expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(
+      screen.getByText(`© ${new Date().getFullYear()} Ministry of Education`),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/LibreChat/)).toBeNull();
   });
 
   test('opens custom footer markdown links in a new tab', () => {

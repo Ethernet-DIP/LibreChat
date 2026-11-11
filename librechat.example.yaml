@@ -1426,6 +1426,24 @@ endpoints:
   #     # - "disabled": No trace information (default)
   #     # Trace output is logged to application log files for compliance auditing
   #     trace: "enabled"
+# MoE deployment: every user chats with one fixed agent, with no model picker.
+# 1. Create the agent, share it with all users, and put its id below (agent_...).
+# 2. `enforce` blocks other endpoints and models; `modelSelect: false` hides the picker, so the
+#    header shows the agent's name and logo as a plain label.
+# interface:
+#   modelSelect: false
+# modelSpecs:
+#   enforce: true
+#   prioritize: true
+#   list:
+#     - name: "moe-teacher-assistant"
+#       label: "MoE Teacher Assistant Agent"
+#       default: true
+#       iconURL: "/assets/moe-logo.jpg"
+#       preset:
+#         endpoint: "agents"
+#         agent_id: "agent_REPLACE_ME"
+
 # Example modelSpecs configuration showing grouping options
 # The 'group' field organizes model specs in the UI selector:
 # - If 'group' matches an endpoint name (e.g., "openAI", "groq"), the spec appears nested under that endpoint
