@@ -244,6 +244,11 @@ interface:
   # Note: This setting does not disable the Agents File Search Capability.
   # To disable the Agents Capability, see the Agents Endpoint configuration instead.
   fileSearch: true
+  # Native app download buttons on the sign-in page; a platform without a URL shows no button.
+  # appDownloads:
+  #   desktop: 'https://example.com/downloads/desktop'
+  #   android: 'https://example.com/downloads/app.apk'
+  #   ios: 'https://apps.apple.com/app/id0000000000'
   # Privacy policy settings
   # Replace the policy links in the sign-in and sign-up page footer with one link.
   # authFooterLink:

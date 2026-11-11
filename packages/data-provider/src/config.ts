@@ -3122,6 +3122,15 @@ export const interfaceSchema = z
         url: linkUrlSchema,
       })
       .optional(),
+    /** Download links for the native apps, shown as buttons on the sign-in page.
+     *  Only the platforms with a URL get a button. */
+    appDownloads: z
+      .object({
+        desktop: linkUrlSchema.optional(),
+        android: linkUrlSchema.optional(),
+        ios: linkUrlSchema.optional(),
+      })
+      .optional(),
     customWelcome: z.string().optional(),
     /** What heads the welcome screen when an agent, assistant or branded spec is
      *  selected: its name (`entity`), or the time-of-day greeting with the user's
