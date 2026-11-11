@@ -6,7 +6,7 @@ type InterfaceConfig = NonNullable<AppConfig['interfaceConfig']>;
 
 type PreLoginInterface = Pick<
   InterfaceConfig,
-  'privacyPolicy' | 'termsOfService' | 'authFooterLink' | 'buildInfo' | 'theme'
+  'privacyPolicy' | 'termsOfService' | 'authFooterLink' | 'appDownloads' | 'buildInfo' | 'theme'
 >;
 
 type PolicyLinks = Pick<InterfaceConfig, 'privacyPolicy' | 'termsOfService'>;
@@ -111,12 +111,18 @@ export function buildPreLoginInterface(
   if (!interfaceConfig) {
     return undefined;
   }
-  const { privacyPolicy, termsOfService, authFooterLink, buildInfo, theme } =
+  const { privacyPolicy, termsOfService, authFooterLink, appDownloads, buildInfo, theme } =
     withSafePolicyLinks(interfaceConfig);
+  const safeEntries = Object.entries(appDownloads ?? {}).filter(
+    ([, url]) => typeof url === 'string' && isSafeLinkUrl(url),
+  );
+  const safeDownloads =
+    safeEntries.length > 0 ? (Object.fromEntries(safeEntries) as typeof appDownloads) : undefined;
   const selected: PreLoginInterface = {
     ...(privacyPolicy && { privacyPolicy }),
     ...(termsOfService && { termsOfService }),
     ...(authFooterLink?.url && isSafeLinkUrl(authFooterLink.url) && { authFooterLink }),
+    ...(safeDownloads && { appDownloads: safeDownloads }),
     ...(buildInfo === false && { buildInfo }),
     ...(theme && { theme }),
   };

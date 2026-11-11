@@ -8,6 +8,7 @@ import { BlinkAnimation } from './BlinkAnimation';
 import AuthShowcase from './AuthShowcase';
 import AuthBackdrop from './AuthBackdrop';
 import LegalConsent from './LegalConsent';
+import Downloads from './Downloads';
 import { Banner } from '../Banners';
 import Footer from './Footer';
 import { cn } from '~/utils';
@@ -129,6 +130,7 @@ function AuthLayout({
               <SocialLoginRender startupConfig={startupConfig} showPasskey={isLogin} />
             )}
             {statesConsentBelowProviders && <LegalConsent startupConfig={startupConfig} />}
+            {isLogin && <Downloads startupConfig={startupConfig} />}
           </div>
         </main>
         {(!statesConsent || startupConfig?.interface?.authFooterLink != null) && (
