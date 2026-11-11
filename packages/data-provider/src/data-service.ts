@@ -85,6 +85,12 @@ export function updateLangfuseConnection(
   return request.put(endpoints.adminLangfuseConnection(), payload);
 }
 
+export function createAdminUser(
+  payload: t.TAdminCreateUserRequest,
+): Promise<t.TAdminCreateUserResponse> {
+  return request.post(endpoints.adminUsers(), payload);
+}
+
 export function testLangfuseConnection(
   payload: t.TLangfuseConnectionTestRequest,
 ): Promise<t.TLangfuseConnectionTestResponse> {

@@ -56,6 +56,7 @@ import ImageResize from '../SettingsTabs/Chat/ImageResize';
 import Passkeys from '../SettingsTabs/Account/Passkeys';
 import { showThinkingAtom } from '~/store/showThinking';
 import ProviderKeys from '../SettingsTabs/ProviderKeys';
+import AddUser from '../SettingsTabs/General/AddUser';
 import { showLiaAtom } from '~/components/Lia/store';
 import { autoScrollAtom } from '~/store/autoScroll';
 import Avatar from '../SettingsTabs/Account/Avatar';
@@ -280,6 +281,15 @@ export const registry: SettingEntry[] = [
     keywords: ['admin', 'panel', 'dashboard'],
     Component: AdminPanel,
     show: (ctx) => ctx.adminPanelURL !== '',
+  },
+  {
+    id: 'addUser',
+    tab: GENERAL,
+    section: 'admin',
+    labelKey: 'com_ui_add_user',
+    keywords: ['admin', 'user', 'account', 'create', 'password', 'signup'],
+    Component: AddUser,
+    show: (ctx) => ctx.isAdmin,
   },
 
   // Chat · Sending

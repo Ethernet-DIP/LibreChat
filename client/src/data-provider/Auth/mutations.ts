@@ -7,6 +7,14 @@ import useClearStates from '~/hooks/Config/useClearStates';
 import { clearAllConversationStorage } from '~/utils';
 import store from '~/store';
 
+export const useCreateAdminUserMutation = (
+  options?: UseMutationOptions<t.TAdminCreateUserResponse, unknown, t.TAdminCreateUserRequest>,
+): UseMutationResult<t.TAdminCreateUserResponse, unknown, t.TAdminCreateUserRequest> =>
+  useMutation([MutationKeys.createAdminUser], {
+    mutationFn: (payload: t.TAdminCreateUserRequest) => dataService.createAdminUser(payload),
+    ...options,
+  });
+
 /* login/logout */
 export const useLogoutUserMutation = (
   options?: t.LogoutOptions,

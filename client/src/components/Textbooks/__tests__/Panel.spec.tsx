@@ -50,7 +50,8 @@ function renderPanel(overrides: Partial<TextbookPanelProps> = {}) {
   function Harness() {
     const [search, setSearch] = useState('');
     const [details, setDetails] = useState({
-      topic: '',
+      subject: '',
+      unit: '',
       section: '',
       grade: '',
       duration: '40',
@@ -123,18 +124,64 @@ describe('textbook panel', () => {
     expect(container.querySelector('input[type="file"]')).not.toBeInTheDocument();
   });
 
-  it('requires a selected textbook and topic before generating a plan', () => {
+  it('requires a textbook, subject, unit, section and grade before generating a plan', async () => {
     const { onGenerate } = renderPanel();
     const generate = screen.getByRole('button', { name: 'Create daily lesson plan' });
     expect(generate).toBeDisabled();
-    fireEvent.change(screen.getByLabelText('Topic or unit'), {
-      target: { value: 'Microscope and its uses' },
+    fireEvent.click(screen.getByRole('button', { name: /Grade 9 Biology/ }));
+    fireEvent.change(screen.getByLabelText('Unit or Chapter'), {
+      target: { value: 'Unit 3: Cells' },
+    });
+    fireEvent.change(screen.getByLabelText('Section or Topic'), {
+      target: { value: 'Section 3.4: Types of Cells' },
     });
     expect(generate).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: /Grade 9 Biology/ }));
+    fireEvent.change(screen.getByLabelText('Subject'), { target: { value: '  ' } });
+    expect(generate).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Subject'), { target: { value: 'Biology' } });
+    expect(generate).toBeDisabled();
+    fireEvent.click(screen.getByRole('combobox', { name: /^Grade/ }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Grade 9' }));
     expect(generate).toBeEnabled();
     fireEvent.click(generate);
     expect(onGenerate).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the unit and section examples', () => {
+    renderPanel();
+    expect(screen.getByLabelText('Unit or Chapter')).toHaveAttribute(
+      'placeholder',
+      'e.g. Unit 3: Cells',
+    );
+    expect(screen.getByLabelText('Section or Topic')).toHaveAttribute(
+      'placeholder',
+      'e.g. Types of Cells',
+    );
+  });
+
+  it('offers the listed subjects and accepts a typed one', async () => {
+    renderPanel();
+    const subject = screen.getByLabelText('Subject');
+    fireEvent.focus(subject);
+    fireEvent.change(subject, { target: { value: 'History' } });
+    expect(subject).toHaveValue('History');
+    for (const name of ['English', 'Mathematics', 'Biology', 'Chemistry', 'Physics']) {
+      expect(await screen.findByRole('option', { name, hidden: true })).toBeInTheDocument();
+    }
+  });
+
+  it('offers grades 9 to 12 in the grade dropdown', async () => {
+    renderPanel();
+    fireEvent.click(screen.getByRole('combobox', { name: /^Grade/ }));
+    const options = await screen.findAllByRole('option');
+    expect(options.map((option) => option.textContent)).toEqual([
+      'Grade 9',
+      'Grade 10',
+      'Grade 11',
+      'Grade 12',
+    ]);
+    fireEvent.click(options[1]);
+    expect(screen.getByRole('combobox', { name: /^Grade/ })).toHaveTextContent('Grade 10');
   });
 
   it.each([{ busy: true }, { uploading: true }, { canAttach: false }])(
@@ -143,7 +190,14 @@ describe('textbook panel', () => {
       renderPanel({
         ...flags,
         selectedIds: new Set(['biology']),
-        details: { topic: 'Cells', section: '', grade: '9', duration: '40', date: '' },
+        details: {
+          subject: 'Biology',
+          unit: 'Cells',
+          section: '3.4',
+          grade: 'Grade 9',
+          duration: '40',
+          date: '',
+        },
       });
       expect(screen.getByRole('button', { name: 'Create daily lesson plan' })).toBeDisabled();
     },
@@ -178,7 +232,14 @@ describe('textbook panel', () => {
       files: [agentBook, books[1]],
       canSearch: true,
       busy: true,
-      details: { topic: 'Cells', section: '', grade: '9', duration: '40', date: '' },
+      details: {
+        subject: 'Biology',
+        unit: 'Cells',
+        section: '3.4',
+        grade: 'Grade 9',
+        duration: '40',
+        date: '',
+      },
     });
     const textbook = screen.getByRole('button', { name: /Grade 9 Biology/ });
     const personal = screen.getByRole('button', { name: /Grade 10 English/ });
@@ -219,7 +280,14 @@ describe('textbook panel', () => {
       selectedIds: new Set(['biology']),
       canSearch: true,
       canAttach: false,
-      details: { topic: 'Cells', section: '', grade: '9', duration: '40', date: '' },
+      details: {
+        subject: 'Biology',
+        unit: 'Cells',
+        section: '3.4',
+        grade: 'Grade 9',
+        duration: '40',
+        date: '',
+      },
     });
     expect(screen.getByRole('button', { name: /Grade 9 Biology/ })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Create daily lesson plan' })).toBeEnabled();

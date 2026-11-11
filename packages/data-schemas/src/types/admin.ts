@@ -1318,6 +1318,8 @@ export const AUDIT_ACTIONS = [
   'audit.read',
   'audit.exported',
   'audit.purged',
+  /** Account provisioned by an admin; target `{ type: 'user', id, name: email }`. */
+  'user.created',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -1362,6 +1364,7 @@ export const AUDIT_ACTION_CATEGORY: Record<AuditAction, AuditCategory> = {
   'audit.read': 'audit',
   'audit.exported': 'audit',
   'audit.purged': 'audit',
+  'user.created': 'user',
 };
 
 /** Result of the audited operation. Kept first-class instead of being encoded

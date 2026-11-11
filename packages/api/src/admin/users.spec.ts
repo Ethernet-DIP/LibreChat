@@ -83,6 +83,7 @@ function createDeps(overrides: Partial<AdminUsersDeps> = {}): AdminUsersDeps {
       getCleanupJob: jest.fn().mockResolvedValue(undefined),
       abortJob: jest.fn().mockResolvedValue(null),
     },
+    registerUser: jest.fn().mockResolvedValue({ status: 200, message: 'ok' }),
     ...overrides,
   };
 }
@@ -90,6 +91,79 @@ function createDeps(overrides: Partial<AdminUsersDeps> = {}): AdminUsersDeps {
 describe('createAdminUsersHandlers', () => {
   beforeEach(() => {
     jest.mocked(eraseUserData).mockClear();
+  });
+
+  describe('createUser', () => {
+    const body = {
+      name: 'New Teacher',
+      username: 'teacher',
+      email: 'New.Teacher@Example.com',
+      password: 'correct-horse-battery',
+    };
+
+    function createRequest(requestBody: unknown) {
+      const reqRes = createReqRes();
+      (reqRes.req as unknown as { body: unknown }).body = requestBody;
+      return reqRes;
+    }
+
+    it('creates a verified standard user and never trusts a role from the body', async () => {
+      const registerUser = jest.fn().mockResolvedValue({
+        status: 200,
+        message: 'generic',
+        userCreated: true,
+        userId: validUserId,
+      });
+      const recordAuditEntry = jest.fn().mockResolvedValue(undefined);
+      const handlers = createAdminUsersHandlers(createDeps({ registerUser, recordAuditEntry }));
+      const { req, res, status, json } = createRequest({ ...body, role: SystemRoles.ADMIN });
+
+      await handlers.createUser(req, res);
+
+      expect(registerUser).toHaveBeenCalledWith(
+        { ...body, confirm_password: body.password },
+        { role: SystemRoles.USER, emailVerified: true },
+      );
+      expect(status).toHaveBeenCalledWith(201);
+      expect(json).toHaveBeenCalledWith({
+        user: { id: validUserId, email: 'new.teacher@example.com', role: SystemRoles.USER },
+      });
+      const entry = recordAuditEntry.mock.calls[0][0];
+      expect(entry).toMatchObject({
+        action: 'user.created',
+        target: { type: 'user', id: validUserId, name: 'new.teacher@example.com' },
+      });
+      expect(JSON.stringify(entry)).not.toContain(body.password);
+    });
+
+    it.each([
+      [{ status: 200, message: 'generic' }, 409, 'email_in_use'],
+      [{ status: 403, message: 'domain' }, 403, 'email_domain_not_allowed'],
+      [{ status: 404, message: 'name: too short' }, 400, 'invalid_input'],
+      [{ status: 500, message: 'boom' }, 500, 'create_failed'],
+    ])('maps %j to %i %s without echoing the message', async (result, httpStatus, code) => {
+      const handlers = createAdminUsersHandlers(
+        createDeps({ registerUser: jest.fn().mockResolvedValue(result) }),
+      );
+      const { req, res, status, json } = createRequest(body);
+
+      await handlers.createUser(req, res);
+
+      expect(status).toHaveBeenCalledWith(httpStatus);
+      expect(json).toHaveBeenCalledWith({ error: code, code });
+    });
+
+    it('hides unexpected failures behind a stable code', async () => {
+      const handlers = createAdminUsersHandlers(
+        createDeps({ registerUser: jest.fn().mockRejectedValue(new Error('mongo://secret down')) }),
+      );
+      const { req, res, status, json } = createRequest(body);
+
+      await handlers.createUser(req, res);
+
+      expect(status).toHaveBeenCalledWith(500);
+      expect(json).toHaveBeenCalledWith({ error: 'create_failed', code: 'create_failed' });
+    });
   });
 
   describe('listUsers', () => {
