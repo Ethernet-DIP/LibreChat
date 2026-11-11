@@ -1650,6 +1650,33 @@ export function listRoles(): Promise<q.ListRolesResponse> {
   return request.get(`${endpoints.adminRoles()}?limit=200`);
 }
 
+export function listAdminUsers(params: q.AdminUsersParams = {}): Promise<q.AdminUsersResponse> {
+  return request.get(endpoints.adminUsers(params));
+}
+
+export function updateAdminUser(
+  userId: string,
+  body: q.AdminUpdateUserBody,
+): Promise<q.AdminCreateUserResponse> {
+  return request.patch(endpoints.adminUser(userId), body);
+}
+
+/** Moves a user into `roleName`; the server ends their membership of the previous role. */
+export function addAdminRoleMember(
+  roleName: string,
+  userId: string,
+): Promise<{ success: boolean }> {
+  return request.post(endpoints.adminRoleMembers(roleName), { userId });
+}
+
+/** Returns a user to the USER role. The server refuses to remove the last admin. */
+export function removeAdminRoleMember(
+  roleName: string,
+  userId: string,
+): Promise<{ success: boolean }> {
+  return request.delete(endpoints.adminRoleMember(roleName, userId));
+}
+
 export function getRole(roleName: string): Promise<r.TRole> {
   return request.get(endpoints.getRole(roleName));
 }

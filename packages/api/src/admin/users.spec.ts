@@ -896,3 +896,152 @@ describe('createAdminUsersHandlers', () => {
     });
   });
 });
+
+describe('updateUser', () => {
+  const targetId = new Types.ObjectId();
+  const adminId = new Types.ObjectId();
+
+  function setup(
+    target: Partial<IUser> = {},
+    overrides: Partial<AdminUsersDeps> = {},
+    caller: Types.ObjectId = adminId,
+  ) {
+    const existing = mockUser({ _id: targetId, email: 'old@example.com', ...target });
+    const deps = createDeps({
+      findUsers: jest.fn().mockImplementation(async (criteria: { email?: string }) => {
+        if (criteria.email && criteria.email !== existing.email) {
+          return [];
+        }
+        return [existing];
+      }),
+      countUsers: jest.fn().mockResolvedValue(2),
+      updateUser: jest.fn().mockImplementation(async (_id: string, data: Partial<IUser>) => ({
+        ...existing,
+        ...data,
+      })),
+      hashPassword: jest.fn().mockResolvedValue('hashed'),
+      recordAuditEntry: jest.fn().mockResolvedValue(undefined),
+      ...overrides,
+    });
+    const handlers = createAdminUsersHandlers(deps);
+    const call = async (body: unknown) => {
+      const { req, res, status, json } = createReqRes({
+        params: { id: targetId.toString() },
+        user: { _id: caller, role: 'ADMIN' },
+      });
+      req.body = body as typeof req.body;
+      await handlers.updateUser(req, res);
+      return { status, json };
+    };
+    return { deps, call };
+  }
+
+  it('updates the profile and audits the field names, not the values', async () => {
+    const { deps, call } = setup();
+    const { status, json } = await call({ name: 'Renamed Teacher', username: 'renamed' });
+    expect(status).toHaveBeenCalledWith(200);
+    expect(deps.updateUser).toHaveBeenCalledWith(targetId.toString(), {
+      name: 'Renamed Teacher',
+      username: 'renamed',
+    });
+    expect(json).toHaveBeenCalledWith({
+      user: expect.objectContaining({ name: 'Renamed Teacher' }),
+    });
+    expect(deps.recordAuditEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'user.updated',
+        metadata: { fields: 'name,username' },
+      }),
+    );
+  });
+
+  it('hashes a new password and retires existing tokens', async () => {
+    const { deps, call } = setup();
+    const { status, json } = await call({ password: 'a-brand-new-password' });
+    expect(status).toHaveBeenCalledWith(200);
+    expect(deps.updateUser).toHaveBeenCalledWith(
+      targetId.toString(),
+      expect.objectContaining({ password: 'hashed', credentialsChangedAt: expect.any(Date) }),
+    );
+    expect(JSON.stringify(json.mock.calls)).not.toContain('a-brand-new-password');
+    expect(JSON.stringify(json.mock.calls)).not.toContain('hashed');
+  });
+
+  it('refuses a password change for an account that signs in elsewhere', async () => {
+    const { deps, call } = setup({ provider: 'google' });
+    const { status } = await call({ password: 'a-brand-new-password' });
+    expect(status).toHaveBeenCalledWith(409);
+    expect(deps.updateUser).not.toHaveBeenCalled();
+  });
+
+  it('answers 409 when the new email belongs to someone else', async () => {
+    const other = mockUser({ _id: new Types.ObjectId(), email: 'taken@example.com' });
+    const { deps, call } = setup(
+      {},
+      {
+        findUsers: jest
+          .fn()
+          .mockResolvedValueOnce([mockUser({ _id: targetId })])
+          .mockResolvedValue([other]),
+      },
+    );
+    const { status, json } = await call({ email: 'Taken@Example.com' });
+    expect(status).toHaveBeenCalledWith(409);
+    expect(json).toHaveBeenCalledWith({ error: 'email_taken', code: 'email_taken' });
+    expect(deps.updateUser).not.toHaveBeenCalled();
+  });
+
+  it('disables an account, retires its tokens and audits it', async () => {
+    const { deps, call } = setup();
+    const { status, json } = await call({ disabled: true });
+    expect(status).toHaveBeenCalledWith(200);
+    expect(deps.updateUser).toHaveBeenCalledWith(targetId.toString(), {
+      disabled: true,
+      credentialsChangedAt: expect.any(Date),
+    });
+    expect(json).toHaveBeenCalledWith({ user: expect.objectContaining({ disabled: true }) });
+    expect(deps.recordAuditEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'user.disabled' }),
+    );
+  });
+
+  it('re-enables a disabled account', async () => {
+    const { deps, call } = setup({ disabled: true });
+    const { status } = await call({ disabled: false });
+    expect(status).toHaveBeenCalledWith(200);
+    expect(deps.updateUser).toHaveBeenCalledWith(targetId.toString(), { disabled: false });
+    expect(deps.recordAuditEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'user.enabled' }),
+    );
+  });
+
+  it('does not let an admin disable their own account', async () => {
+    const { deps, call } = setup({}, {}, targetId);
+    const { status, json } = await call({ disabled: true });
+    expect(status).toHaveBeenCalledWith(403);
+    expect(json).toHaveBeenCalledWith({
+      error: 'cannot_disable_self',
+      code: 'cannot_disable_self',
+    });
+    expect(deps.updateUser).not.toHaveBeenCalled();
+  });
+
+  it('does not disable the last active admin', async () => {
+    const { deps, call } = setup(
+      { role: SystemRoles.ADMIN },
+      { countUsers: jest.fn().mockResolvedValue(1) },
+    );
+    const { status, json } = await call({ disabled: true });
+    expect(status).toHaveBeenCalledWith(400);
+    expect(json).toHaveBeenCalledWith({ error: 'last_admin', code: 'last_admin' });
+    expect(deps.updateUser).not.toHaveBeenCalled();
+  });
+
+  it('rejects an empty or invalid body', async () => {
+    const { deps, call } = setup();
+    expect((await call({})).status).toHaveBeenCalledWith(400);
+    expect((await call({ name: 'x' })).status).toHaveBeenCalledWith(400);
+    expect((await call({ disabled: 'yes' })).status).toHaveBeenCalledWith(400);
+    expect(deps.updateUser).not.toHaveBeenCalled();
+  });
+});

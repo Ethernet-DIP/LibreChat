@@ -43,6 +43,7 @@ jest.mock('~/hooks/Nav/useUnifiedSidebarLinks', () => ({
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
   useShowMarketplace: () => false,
+  useAdminAccess: () => false,
 }));
 
 jest.mock('@librechat/chat/react', () => ({

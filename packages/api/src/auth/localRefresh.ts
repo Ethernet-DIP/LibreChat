@@ -27,7 +27,7 @@ type RefreshUser = Pick<
   | 'twoFactorEnabled'
   | 'twoFactorEnrolledAt'
   | 'credentialsChangedAt'
->;
+> & { disabled?: boolean };
 
 type RefreshSession = Pick<ISession, 'expiration'> & { _id: UserIdentifier };
 type SessionDeletionResult = { deletedCount?: number };
@@ -126,7 +126,8 @@ export function createLocalRefreshHandler(deps: LocalRefreshDependencies) {
       }
       const userId = payload.id;
       const user = await deps.getUserById(userId, deps.userProjection);
-      if (!user) {
+      if (!user || user.disabled === true) {
+        res.clearCookie('refreshToken');
         clearSessionHintCookie(res);
         return res.status(401).redirect('/login');
       }

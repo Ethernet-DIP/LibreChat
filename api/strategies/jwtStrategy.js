@@ -53,6 +53,10 @@ const jwtLogin = () =>
           });
           return;
         }
+        if (user?.disabled === true) {
+          done(null, false, { message: 'Account is disabled', code: 'ACCOUNT_DISABLED' });
+          return;
+        }
         if (user) {
           return await continueAfterBearerRetirement(
             user,

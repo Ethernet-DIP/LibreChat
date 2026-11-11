@@ -55,6 +55,8 @@ export interface IUser extends Document {
   }>;
   /** Instant of the last credential change; bearer tokens issued before it are rejected */
   credentialsChangedAt?: Date | null;
+  /** An admin turned the account off: sign-in and existing sessions are refused. */
+  disabled?: boolean;
   /** SHA-256 hash of the one-time nonce that authorizes the backup-code acknowledgement step. */
   twoFactorAcknowledgementNonceHash?: string | null;
   /** SHA-256 hash of the one-time nonce that authorizes required-enrollment finalization. */

@@ -2,7 +2,6 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import {
   Login,
   VerifyEmail,
-  Registration,
   ResetPassword,
   TwoFactorScreen,
   TwoFactorSetupScreen,
@@ -19,6 +18,7 @@ import LoginLayout from './Layouts/Login';
 import dashboardRoutes from './Dashboard';
 import WithRum from '~/lib/rum/WithRum';
 import ProjectsRoute from './Projects';
+import AdminRoute from './AdminRoute';
 import ShareRoute from './ShareRoute';
 import ChatRoute from './ChatRoute';
 import Search from './Search';
@@ -45,6 +45,11 @@ const loadSkillsView = () =>
 const loadInsightsView = () =>
   importWithRecovery(() => import('~/components/Insights')).then((m) => ({
     Component: m.default,
+  }));
+
+const loadAdminUsersView = () =>
+  importWithRecovery(() => import('~/components/Admin')).then((m) => ({
+    Component: m.UsersView,
   }));
 
 const loadProjectsView = () =>
@@ -87,8 +92,9 @@ export const router = createBrowserRouter(
       errorElement: <RouteErrorBoundary />,
       children: [
         {
+          /** Self-registration is closed; an admin creates accounts. */
           path: 'register',
-          element: <Registration />,
+          element: <Navigate to="/login" replace />,
         },
         {
           path: 'forgot-password',
@@ -180,6 +186,15 @@ export const router = createBrowserRouter(
                 {
                   path: 'skills/:skillId/edit',
                   lazy: loadSkillsView,
+                },
+                {
+                  element: <AdminRoute />,
+                  children: [
+                    {
+                      path: 'admin/users',
+                      lazy: loadAdminUsersView,
+                    },
+                  ],
                 },
                 {
                   element: <ProjectsRoute />,
