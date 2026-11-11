@@ -1,0 +1,10 @@
+# Layered over docker-compose.yml on the server: builds the app from this checkout
+# instead of pulling the upstream image, so the ministry's changes are what runs.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: moe-teacher-assistant:latest
+    volumes:
+      - ./librechat.yaml:/app/librechat.yaml
