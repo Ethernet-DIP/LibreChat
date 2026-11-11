@@ -304,6 +304,8 @@ export type TError = {
   response?: {
     data?: {
       message?: string;
+      /** A stable failure code, on responses that define them. */
+      code?: string;
     };
     status?: number;
   };

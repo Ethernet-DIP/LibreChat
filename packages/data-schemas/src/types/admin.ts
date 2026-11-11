@@ -1318,6 +1318,8 @@ export const AUDIT_ACTIONS = [
   'audit.read',
   'audit.exported',
   'audit.purged',
+  /** An admin created an account; target `{ type: 'user', id, name }`. */
+  'user.created',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -1346,6 +1348,7 @@ export const AUDIT_ACTION_CATEGORY: Record<AuditAction, AuditCategory> = {
   'config.reloaded': 'config',
   'user.deleted': 'user',
   'user.role_changed': 'user',
+  'user.created': 'user',
   'acl.granted': 'acl',
   'acl.revoked': 'acl',
   'acl.public_changed': 'acl',

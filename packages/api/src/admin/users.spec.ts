@@ -822,3 +822,90 @@ describe('createAdminUsersHandlers', () => {
     });
   });
 });
+
+describe('createUser', () => {
+  function setup(overrides: Partial<AdminUsersDeps> = {}) {
+    const created = mockUser({ email: 'new@example.com', name: 'New Teacher', role: 'USER' });
+    const deps = createDeps({
+      registerUser: jest.fn().mockResolvedValue({ status: 200, userCreated: true }),
+      roleExists: jest.fn().mockResolvedValue(true),
+      findUsers: jest.fn().mockResolvedValue([created]),
+      recordAuditEntry: jest.fn().mockResolvedValue(undefined),
+      ...overrides,
+    });
+    const handlers = createAdminUsersHandlers(deps);
+    return { deps, handlers, created };
+  }
+
+  const body = { name: 'New Teacher', email: 'New@Example.com', password: 'correct-horse-9' };
+
+  function call(handlers: ReturnType<typeof createAdminUsersHandlers>, payload: unknown) {
+    const { req, res, status, json } = createReqRes();
+    req.body = payload;
+    return handlers.createUser(req, res).then(() => ({ status, json }));
+  }
+
+  it('creates the account with a verified email and the default role', async () => {
+    const { deps, handlers } = setup();
+    const { status, json } = await call(handlers, body);
+    expect(deps.registerUser).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'New@Example.com', password: body.password }),
+      { role: SystemRoles.USER, emailVerified: true },
+    );
+    expect(status).toHaveBeenCalledWith(201);
+    expect(json).toHaveBeenCalledWith({
+      user: expect.objectContaining({ email: 'new@example.com', role: 'USER' }),
+    });
+    expect(deps.recordAuditEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'user.created' }),
+    );
+  });
+
+  it('does not answer with the password', async () => {
+    const { handlers } = setup();
+    const { json } = await call(handlers, body);
+    expect(JSON.stringify(json.mock.calls)).not.toContain(body.password);
+  });
+
+  it('rejects a role that does not exist without registering anyone', async () => {
+    const { deps, handlers } = setup({ roleExists: jest.fn().mockResolvedValue(false) });
+    const { status, json } = await call(handlers, { ...body, role: 'GHOST' });
+    expect(status).toHaveBeenCalledWith(400);
+    expect(json).toHaveBeenCalledWith({ error: 'invalid_role', code: 'invalid_role' });
+    expect(deps.registerUser).not.toHaveBeenCalled();
+  });
+
+  it('answers 409 when the email is already in use', async () => {
+    const { handlers } = setup({
+      registerUser: jest.fn().mockResolvedValue({ status: 200, userCreated: false }),
+    });
+    const { status, json } = await call(handlers, body);
+    expect(status).toHaveBeenCalledWith(409);
+    expect(json).toHaveBeenCalledWith({ error: 'email_taken', code: 'email_taken' });
+  });
+
+  it('maps registration validation and domain refusals to stable codes', async () => {
+    const invalid = setup({ registerUser: jest.fn().mockResolvedValue({ status: 404 }) });
+    expect((await call(invalid.handlers, body)).status).toHaveBeenCalledWith(400);
+    const domain = setup({ registerUser: jest.fn().mockResolvedValue({ status: 403 }) });
+    const { status, json } = await call(domain.handlers, body);
+    expect(status).toHaveBeenCalledWith(403);
+    expect(json).toHaveBeenCalledWith({ error: 'domain_not_allowed', code: 'domain_not_allowed' });
+  });
+
+  it('rejects a missing email or password before calling the service', async () => {
+    const { deps, handlers } = setup();
+    const { status } = await call(handlers, { name: 'No Pass', email: 'a@b.co' });
+    expect(status).toHaveBeenCalledWith(400);
+    expect(deps.registerUser).not.toHaveBeenCalled();
+  });
+
+  it('turns a service failure into a 500 without its text', async () => {
+    const { handlers } = setup({
+      registerUser: jest.fn().mockRejectedValue(new Error('mongo://secret@host failed')),
+    });
+    const { status, json } = await call(handlers, body);
+    expect(status).toHaveBeenCalledWith(500);
+    expect(JSON.stringify(json.mock.calls)).not.toContain('secret');
+  });
+});

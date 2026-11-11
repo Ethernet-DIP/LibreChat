@@ -26,6 +26,7 @@ const {
   quiesceUserSchedules,
   restoreUserSchedulesFromDeletion,
 } = require('~/server/services/Schedules');
+const { registerUser } = require('~/server/services/AuthService');
 const db = require('~/models');
 const {
   getAppConfig,
@@ -54,9 +55,13 @@ const resolveErasure = createErasureResolver({
 
 const requireAdminAccess = requireCapability(SystemCapabilities.ACCESS_ADMIN);
 const requireReadUsers = requireCapability(SystemCapabilities.READ_USERS);
-// const requireManageUsers = requireCapability(SystemCapabilities.MANAGE_USERS);
+const requireManageUsers = requireCapability(SystemCapabilities.MANAGE_USERS);
 
 const handlers = createAdminUsersHandlers({
+  registerUser,
+  roleExists: async (name) => (await db.getPartitionRole(name)) != null,
+  recordAuditEntry: db.recordAuditEntry,
+  auditFailClosed: process.env.AUDIT_LOG_FAIL_CLOSED === 'true',
   findUsers: db.findUsers,
   countUsers: db.countUsers,
   beginAgentTriggerUserDeletion: db.beginAgentTriggerUserDeletion,
@@ -90,6 +95,7 @@ router.use(requireJwtAuth, requireAdminAccess);
 
 router.get('/', requireReadUsers, handlers.listUsers);
 router.get('/search', requireReadUsers, handlers.searchUsers);
+router.post('/', requireManageUsers, handlers.createUser);
 // router.delete('/:id', requireManageUsers, handlers.deleteUser);
 
 module.exports = router;

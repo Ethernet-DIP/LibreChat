@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
+import { UserPlus } from 'lucide-react';
 import { SystemRoles } from 'librechat-data-provider';
 import { Button, Dropdown, FilterInput, Skeleton, useToastContext } from '@librechat/client';
 import type { AdminUserListItem, TError } from 'librechat-data-provider';
 import { useAdminUsersQuery, useListRoles, useSetUserRoleMutation } from '~/data-provider';
 import { useAuthContext } from '~/hooks/AuthContext';
+import AddUserDialog from './AddUserDialog';
 import { useLocalize } from '~/hooks';
 
 const PAGE_SIZE = 25;
@@ -23,6 +25,7 @@ export default function UsersView() {
   const { user: self } = useAuthContext();
   const [offset, setOffset] = useState(0);
   const [filter, setFilter] = useState('');
+  const [addOpen, setAddOpen] = useState(false);
 
   const { data, isLoading, isError, isFetching, refetch } = useAdminUsersQuery({
     limit: PAGE_SIZE,
@@ -74,12 +77,21 @@ export default function UsersView() {
   return (
     <main className="bg-surface-primary flex h-full min-h-0 flex-col overflow-y-auto px-4 py-6 md:px-8">
       <div className="mx-auto w-full max-w-4xl">
-        <h1 className="text-text-primary text-2xl font-semibold">
-          {localize('com_ui_admin_users')}
-        </h1>
-        <p className="text-text-secondary mt-1 text-sm">
-          {localize('com_ui_admin_users_description')}
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-text-primary text-2xl font-semibold">
+              {localize('com_ui_admin_users')}
+            </h1>
+            <p className="text-text-secondary mt-1 text-sm">
+              {localize('com_ui_admin_users_description')}
+            </p>
+          </div>
+          <Button variant="submit" className="shrink-0" onClick={() => setAddOpen(true)}>
+            <UserPlus className="size-4" aria-hidden="true" />
+            {localize('com_ui_admin_users_add')}
+          </Button>
+        </div>
+        <AddUserDialog open={addOpen} onOpenChange={setAddOpen} />
 
         <div className="mt-6 max-w-sm">
           <FilterInput

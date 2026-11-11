@@ -33,3 +33,14 @@ export const useSetUserRoleMutation = (): UseMutationResult<
     { onSuccess: () => queryClient.invalidateQueries([QueryKeys.adminUsers]) },
   );
 };
+
+export const useCreateUserMutation = (): UseMutationResult<
+  t.AdminCreateUserResponse,
+  t.TError | undefined,
+  t.AdminCreateUserBody
+> => {
+  const queryClient = useQueryClient();
+  return useMutation((body: t.AdminCreateUserBody) => dataService.createAdminUser(body), {
+    onSuccess: () => queryClient.invalidateQueries([QueryKeys.adminUsers]),
+  });
+};

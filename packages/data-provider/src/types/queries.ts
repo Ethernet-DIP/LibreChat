@@ -319,6 +319,16 @@ export type AdminUserListItem = {
   updatedAt?: string;
 };
 
+export type AdminCreateUserBody = {
+  name: string;
+  email: string;
+  username?: string;
+  password: string;
+  role?: string;
+};
+
+export type AdminCreateUserResponse = { user: AdminUserListItem };
+
 export type AdminUsersParams = { limit?: number; offset?: number };
 
 export type AdminUsersResponse = {

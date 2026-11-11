@@ -15,8 +15,11 @@ import type { Response } from 'express';
 import type { UserGenerationControl } from '~/user/generations';
 import type { UserErasureDeps } from '~/user/erasure';
 import type { ServerRequest } from '~/types/http';
+import type { RecordAuditEntry } from './audit';
 import { stopUserGenerations } from '~/user/generations';
+import { getSafeErrorMetadata } from '~/utils/errors';
 import { invalidatingConfigStore } from './cascade';
+import { createAdminAuditEmitter } from './audit';
 import { parsePagination } from './pagination';
 import { eraseUserData } from '~/user/erasure';
 
@@ -65,7 +68,33 @@ export interface AdminErasureContext {
   checkpointer?: TCheckpointerConfig;
 }
 
+/** The account an admin supplies to `createUser`. */
+export interface AdminCreateUserInput {
+  email: string;
+  name: string;
+  username: string;
+  password: string;
+  confirm_password: string;
+}
+
+/** What the shared registration service answers; `userCreated` separates a new account from
+ *  the identical 200 it returns when the email is already in use. */
+export interface AdminRegisterResult {
+  status: number;
+  message?: string;
+  userCreated?: boolean;
+}
+
 export interface AdminUsersDeps {
+  /** The shared registration service, called with the admin-chosen role and a verified email. */
+  registerUser?: (
+    user: AdminCreateUserInput,
+    additionalData: { role: string; emailVerified: boolean },
+  ) => Promise<AdminRegisterResult>;
+  /** Whether a role of exactly this name exists in the caller's partition. */
+  roleExists?: (name: string) => Promise<boolean>;
+  recordAuditEntry?: RecordAuditEntry;
+  auditFailClosed?: boolean;
   findUsers: (
     searchCriteria: FilterQuery<IUser>,
     fieldsToSelect?: string | string[] | null,
@@ -127,7 +156,14 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps): {
   listUsers: (req: ServerRequest, res: Response) => Promise<Response>;
   searchUsers: (req: ServerRequest, res: Response) => Promise<Response>;
   deleteUser: (req: ServerRequest, res: Response) => Promise<Response>;
+  createUser: (req: ServerRequest, res: Response) => Promise<Response>;
 } {
+  const emitAudit = createAdminAuditEmitter({
+    recordAuditEntry: deps.recordAuditEntry,
+    failClosed: deps.auditFailClosed,
+    logPrefix: '[adminUsers]',
+  });
+
   const {
     findUsers,
     countUsers,
@@ -224,6 +260,84 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps): {
     } catch (error) {
       logger.error('[adminUsers] searchUsers error:', error);
       return res.status(500).json({ error: 'Failed to search users' });
+    }
+  }
+
+  /** Stable codes the client maps to localized copy; the body never carries service text. */
+  type CreateUserError =
+    | 'invalid_details'
+    | 'invalid_role'
+    | 'email_taken'
+    | 'domain_not_allowed'
+    | 'unavailable';
+
+  const createUserFailure = (res: Response, status: number, code: CreateUserError) =>
+    res.status(status).json({ error: code, code });
+
+  async function createUserHandler(req: ServerRequest, res: Response) {
+    try {
+      const { registerUser, roleExists } = deps;
+      if (!registerUser || !roleExists) {
+        return createUserFailure(res, 501, 'unavailable');
+      }
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const email = typeof body.email === 'string' ? body.email.trim() : '';
+      const name = typeof body.name === 'string' ? body.name.trim() : '';
+      const password = typeof body.password === 'string' ? body.password : '';
+      const role =
+        typeof body.role === 'string' && body.role.trim() ? body.role.trim() : SystemRoles.USER;
+      const rawUsername = typeof body.username === 'string' ? body.username.trim() : '';
+      const username = rawUsername || email.split('@')[0];
+
+      if (!email.includes('@') || email.length > 120 || !name || !password || !username) {
+        return createUserFailure(res, 400, 'invalid_details');
+      }
+      if (role !== SystemRoles.USER && !(await roleExists(role))) {
+        return createUserFailure(res, 400, 'invalid_role');
+      }
+
+      const result = await registerUser(
+        { email, name, username, password, confirm_password: password },
+        { role, emailVerified: true },
+      );
+      if (result.status === 403) {
+        return createUserFailure(res, 403, 'domain_not_allowed');
+      }
+      if (result.status === 404) {
+        return createUserFailure(res, 400, 'invalid_details');
+      }
+      if (result.status !== 200) {
+        return res.status(500).json({ error: 'Failed to create user' });
+      }
+      if (result.userCreated !== true) {
+        return createUserFailure(res, 409, 'email_taken');
+      }
+
+      const [created] = await findUsers({ email: email.toLowerCase() }, USER_LIST_FIELDS, {
+        limit: 1,
+      });
+      const userId = created?._id?.toString() ?? '';
+      await emitAudit(req, {
+        action: 'user.created',
+        severity: role === SystemRoles.ADMIN ? 'critical' : 'info',
+        target: { type: 'user', id: userId, name: created?.name ?? name },
+        metadata: { role },
+      });
+      const user: AdminUserListItem = {
+        id: userId,
+        name: created?.name ?? name,
+        username: created?.username ?? username,
+        email: created?.email ?? email,
+        avatar: created?.avatar ?? '',
+        role: created?.role ?? role,
+        provider: created?.provider ?? 'local',
+        createdAt: created?.createdAt?.toISOString(),
+        updatedAt: created?.updatedAt?.toISOString(),
+      };
+      return res.status(201).json({ user });
+    } catch (error) {
+      logger.error('[adminUsers] createUser error:', getSafeErrorMetadata(error));
+      return res.status(500).json({ error: 'Failed to create user' });
     }
   }
 
@@ -367,5 +481,6 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps): {
     listUsers: listUsersHandler,
     searchUsers: searchUsersHandler,
     deleteUser: deleteUserHandler,
+    createUser: createUserHandler,
   };
 }

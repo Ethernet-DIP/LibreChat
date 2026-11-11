@@ -2,7 +2,6 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import {
   Login,
   VerifyEmail,
-  Registration,
   ResetPassword,
   TwoFactorScreen,
   TwoFactorSetupScreen,
@@ -93,8 +92,9 @@ export const router = createBrowserRouter(
       errorElement: <RouteErrorBoundary />,
       children: [
         {
+          /** Self-registration is closed; an admin creates accounts. */
           path: 'register',
-          element: <Registration />,
+          element: <Navigate to="/login" replace />,
         },
         {
           path: 'forgot-password',
