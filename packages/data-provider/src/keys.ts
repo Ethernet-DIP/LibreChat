@@ -72,6 +72,7 @@ export enum QueryKeys {
   marketplaceAgents = 'marketplaceAgents',
   roles = 'roles',
   rolesList = 'rolesList',
+  adminUsers = 'adminUsers',
   conversationTags = 'conversationTags',
   health = 'health',
   userTerms = 'userTerms',

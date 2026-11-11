@@ -307,6 +307,27 @@ export type ListRolesResponse = {
   offset?: number;
 };
 
+export type AdminUserListItem = {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  avatar: string;
+  role: string;
+  provider: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AdminUsersParams = { limit?: number; offset?: number };
+
+export type AdminUsersResponse = {
+  users: AdminUserListItem[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
 export interface MCPServerStatus {
   requiresOAuth: boolean;
   /** The server connects only inside a chat request because its config reads BODY placeholders. */
