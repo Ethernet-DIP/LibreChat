@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const {
+  hashSecret,
   GenerationJobManager,
   openCheckpointDeletion,
   deleteAllSharedLinksWithCleanup,
@@ -59,6 +60,9 @@ const requireManageUsers = requireCapability(SystemCapabilities.MANAGE_USERS);
 
 const handlers = createAdminUsersHandlers({
   registerUser,
+  updateUser: db.updateUser,
+  hashPassword: hashSecret,
+  minPasswordLength: parseInt(process.env.MIN_PASSWORD_LENGTH, 10) || 8,
   roleExists: async (name) => (await db.getPartitionRole(name)) != null,
   recordAuditEntry: db.recordAuditEntry,
   auditFailClosed: process.env.AUDIT_LOG_FAIL_CLOSED === 'true',
@@ -96,6 +100,7 @@ router.use(requireJwtAuth, requireAdminAccess);
 router.get('/', requireReadUsers, handlers.listUsers);
 router.get('/search', requireReadUsers, handlers.searchUsers);
 router.post('/', requireManageUsers, handlers.createUser);
+router.patch('/:id', requireManageUsers, handlers.updateUser);
 // router.delete('/:id', requireManageUsers, handlers.deleteUser);
 
 module.exports = router;

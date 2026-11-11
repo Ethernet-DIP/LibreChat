@@ -279,6 +279,7 @@ const refreshController = async (req, res) => {
               );
               if (
                 !user ||
+                user.disabled === true ||
                 isTokenRetired(reuseCredential, user) ||
                 !isReusableOpenIDSessionIdentity(reuseSessionTokens, user)
               ) {

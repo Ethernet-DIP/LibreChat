@@ -44,6 +44,12 @@ async function passportLogin(req, email, password, done) {
       return done(null, false, { message: 'Incorrect password.' });
     }
 
+    if (user.disabled === true) {
+      logError('Passport Local Strategy - Account disabled', { email });
+      logger.error(`[Login] [Login failed] [Username: ${email}] [Request-IP: ${req.ip}]`);
+      return done(null, false, { message: 'This account has been disabled.' });
+    }
+
     await grandfatherLegacyEmailVerification({ updateUser }, user);
 
     const unverifiedAllowed = isEnabled(process.env.ALLOW_UNVERIFIED_EMAIL_LOGIN);

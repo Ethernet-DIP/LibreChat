@@ -2558,3 +2558,30 @@ html[data-input-modality='keyboard']
 .ReactVirtualized__Grid {
   direction: inherit !important;
 }
+
+/* Brand surface: the signed-in sidebar wears the sign-in panel's logo blue. Components inside it
+ * read the ordinary text, surface and border roles, so this scope re-points those roles at
+ * values that read on blue in both light and dark instead of restyling every consumer. A shared
+ * primitive cannot express this: it is a scoped color scheme, not a variant of one component. */
+.brand-surface {
+  --text-primary: var(--white);
+  --text-secondary: var(--blue-100);
+  --text-secondary-alt: var(--blue-100);
+  --text-tertiary: var(--blue-200);
+  --text-muted: var(--blue-200);
+  --surface-sidebar: var(--surface-brand-hover);
+  --surface-hover: var(--surface-brand-hover);
+  --surface-hover-alt: var(--surface-brand-hover);
+  --surface-active: var(--blue-950);
+  --surface-active-alt: var(--blue-950);
+  --surface-nav-hover: var(--surface-brand-hover);
+  --surface-nav-selected: var(--blue-950);
+  --surface-secondary: var(--surface-brand-hover);
+  --surface-tertiary: var(--surface-brand-hover);
+  --surface-primary-alt: var(--surface-brand-hover);
+  --border-light: var(--blue-600);
+  --border-medium: var(--blue-500);
+  --border-heavy: var(--blue-400);
+  --accent-primary: var(--amber-300);
+  --accent-primary-hover: var(--amber-200);
+}

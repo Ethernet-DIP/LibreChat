@@ -26,6 +26,7 @@ import { ChatFormProvider, ActivePanelProvider } from '~/Providers';
 import AdminUsersButton from '~/components/Nav/AdminUsersButton';
 import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
 import useSidebarState from '~/hooks/Nav/useSidebarState';
+import AuthPattern from '~/components/Auth/AuthPattern';
 import SidePanelNav from '~/components/SidePanel/Nav';
 import { createResizeMeasure } from './resize';
 import { useLocalize } from '~/hooks';
@@ -233,7 +234,7 @@ function UnifiedSidebar({
          * a site banner above that container stays above the drawer too
          * instead of covering its header strip, as it already does for the
          * scrim and the pane. */
-        'bg-surface-sidebar text-text-primary absolute inset-y-0 inset-s-0 flex touch-pan-y touch-pinch-zoom flex-col',
+        'brand-surface from-surface-brand to-surface-brand-hover text-text-primary absolute inset-y-0 inset-s-0 isolate flex touch-pan-y touch-pinch-zoom flex-col bg-gradient-to-b',
         /** In dark mode the scrim and the drawer are both near-black, and no
          *  scrim opacity separates them by 3:1, so the drawer draws its own
          *  edge. Light palettes get that separation from the scrim, so the
@@ -257,6 +258,7 @@ function UnifiedSidebar({
       }}
       inert={!expanded ? '' : undefined}
     >
+      <AuthPattern className="-z-10" />
       <SidebarChatProvider>
         <ActivePanelProvider>
           <MobileHeader
@@ -276,7 +278,7 @@ function UnifiedSidebar({
             <AgentMarketplaceButton layout="row" onNavigate={handleCollapse} />
             <AdminUsersButton layout="row" onNavigate={handleCollapse} />
           </div>
-          <nav id="chat-history-nav" className="bg-surface-sidebar min-h-0 flex-1 overflow-hidden">
+          <nav id="chat-history-nav" className="min-h-0 flex-1 overflow-hidden">
             <SidePanelNav links={links} />
           </nav>
           <MobileShortcutTargets

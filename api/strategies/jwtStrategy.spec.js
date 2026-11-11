@@ -190,6 +190,19 @@ describe('jwtStrategy', () => {
     );
   });
 
+  it('rejects a token for an account an admin has disabled', async () => {
+    getUserById.mockResolvedValue({
+      _id: { toString: () => 'user-4' },
+      role: SystemRoles.USER,
+      disabled: true,
+    });
+
+    expect(await invokeVerify({ id: 'user-4' })).toEqual({
+      user: false,
+      info: { message: 'Account is disabled', code: 'ACCOUNT_DISABLED' },
+    });
+  });
+
   describe('credentialsChangedAt revocation', () => {
     /** Reset landed 500ms into second 1700000010 */
     const credentialsChangedAt = new Date(1700000010500);

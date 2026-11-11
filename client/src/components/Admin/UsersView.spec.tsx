@@ -58,6 +58,28 @@ describe('UsersView', () => {
     expect(screen.getByText('Ada Admin')).toBeInTheDocument();
   });
 
+  it('marks a disabled account and offers to enable it', async () => {
+    mockList.mockResolvedValue({
+      users: [users[0], { ...users[1], disabled: true }],
+      total: 2,
+      limit: 25,
+      offset: 0,
+    });
+    renderView();
+    await screen.findByText('Bob Teacher');
+    expect(screen.getByText('Disabled')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /enable bob teacher/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^disable bob teacher/i })).not.toBeInTheDocument();
+  });
+
+  it('does not let an admin disable their own account', async () => {
+    mockList.mockResolvedValue({ users, total: 2, limit: 25, offset: 0 });
+    renderView();
+    await screen.findByText('Bob Teacher');
+    expect(screen.getByRole('button', { name: /disable ada admin/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /disable bob teacher/i })).toBeEnabled();
+  });
+
   it('does not let an admin change their own role', async () => {
     mockList.mockResolvedValue({ users, total: 2, limit: 25, offset: 0 });
     renderView();

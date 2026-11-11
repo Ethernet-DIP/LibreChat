@@ -11,20 +11,13 @@ import {
   useToastContext,
 } from '@librechat/client';
 import type { TError } from 'librechat-data-provider';
-import type { TranslationKeys } from '~/hooks';
 import { useCreateUserMutation, useListRoles } from '~/data-provider';
+import { adminUserErrorKeys } from './errors';
 import { useLocalize } from '~/hooks';
 
 type AddUserDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-};
-
-const errorKeys: Record<string, TranslationKeys> = {
-  invalid_details: 'com_ui_admin_users_err_invalid_details',
-  email_taken: 'com_ui_admin_users_err_email_taken',
-  domain_not_allowed: 'com_ui_admin_users_err_domain',
-  invalid_role: 'com_ui_admin_users_err_role',
 };
 
 /** Creates an account on the admin's behalf. The server marks the email verified and applies
@@ -82,7 +75,9 @@ export default function AddUserDialog({ open, onOpenChange }: AddUserDialogProps
   };
 
   const canSubmit = name.trim() && email.trim() && password && !createUser.isLoading;
-  const errorKey = errorCode ? (errorKeys[errorCode] ?? 'com_ui_admin_users_create_error') : null;
+  const errorKey = errorCode
+    ? (adminUserErrorKeys[errorCode] ?? 'com_ui_admin_users_create_error')
+    : null;
 
   return (
     <OGDialog open={open} onOpenChange={handleOpenChange}>

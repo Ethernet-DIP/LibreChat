@@ -1,10 +1,17 @@
 import { useMemo, useState } from 'react';
-import { UserPlus } from 'lucide-react';
 import { SystemRoles } from 'librechat-data-provider';
+import { Ban, Pencil, UserCheck, UserPlus } from 'lucide-react';
 import { Button, Dropdown, FilterInput, Skeleton, useToastContext } from '@librechat/client';
 import type { AdminUserListItem, TError } from 'librechat-data-provider';
-import { useAdminUsersQuery, useListRoles, useSetUserRoleMutation } from '~/data-provider';
+import {
+  useAdminUsersQuery,
+  useListRoles,
+  useSetUserRoleMutation,
+  useUpdateUserMutation,
+} from '~/data-provider';
 import { useAuthContext } from '~/hooks/AuthContext';
+import DisableUserDialog from './DisableUserDialog';
+import EditUserDialog from './EditUserDialog';
 import AddUserDialog from './AddUserDialog';
 import { useLocalize } from '~/hooks';
 
@@ -26,6 +33,8 @@ export default function UsersView() {
   const [offset, setOffset] = useState(0);
   const [filter, setFilter] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<AdminUserListItem | null>(null);
+  const [disabling, setDisabling] = useState<AdminUserListItem | null>(null);
 
   const { data, isLoading, isError, isFetching, refetch } = useAdminUsersQuery({
     limit: PAGE_SIZE,
@@ -33,6 +42,7 @@ export default function UsersView() {
   });
   const { data: roleList } = useListRoles();
   const setRole = useSetUserRoleMutation();
+  const updateUser = useUpdateUserMutation();
 
   const roleNames = useMemo(() => {
     const names = roleList?.roles?.map((role) => role.name) ?? [];
@@ -53,6 +63,16 @@ export default function UsersView() {
   const total = data?.total ?? 0;
   const pageStart = total === 0 ? 0 : offset + 1;
   const pageEnd = Math.min(offset + PAGE_SIZE, total);
+
+  const enableUser = (target: AdminUserListItem) =>
+    updateUser.mutate(
+      { userId: target.id, disabled: false },
+      {
+        onSuccess: () => showToast({ message: localize('com_ui_admin_users_enabled') }),
+        onError: () =>
+          showToast({ message: localize('com_ui_admin_users_update_error'), status: 'error' }),
+      },
+    );
 
   const changeRole = (target: AdminUserListItem, role: string) => {
     if (role === target.role) {
@@ -92,6 +112,8 @@ export default function UsersView() {
           </Button>
         </div>
         <AddUserDialog open={addOpen} onOpenChange={setAddOpen} />
+        <EditUserDialog user={editing} onOpenChange={(open) => !open && setEditing(null)} />
+        <DisableUserDialog user={disabling} onOpenChange={(open) => !open && setDisabling(null)} />
 
         <div className="mt-6 max-w-sm">
           <FilterInput
@@ -124,20 +146,23 @@ export default function UsersView() {
                   <th scope="col" className="hidden px-4 py-3 text-start font-medium sm:table-cell">
                     {localize('com_ui_admin_users_col_joined')}
                   </th>
+                  <th scope="col" className="px-4 py-3 text-end font-medium">
+                    <span className="sr-only">{localize('com_ui_admin_users_col_actions')}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody aria-busy={isLoading || isFetching}>
                 {isLoading &&
                   Array.from({ length: 5 }, (_, i) => (
                     <tr key={i} className="border-border-light border-t">
-                      <td className="px-4 py-3" colSpan={3}>
+                      <td className="px-4 py-3" colSpan={4}>
                         <Skeleton className="h-8 w-full" />
                       </td>
                     </tr>
                   ))}
                 {!isLoading && users.length === 0 && (
                   <tr className="border-border-light border-t">
-                    <td colSpan={3} className="text-text-secondary px-4 py-8 text-center">
+                    <td colSpan={4} className="text-text-secondary px-4 py-8 text-center">
                       {localize('com_ui_admin_users_empty')}
                     </td>
                   </tr>
@@ -149,6 +174,11 @@ export default function UsersView() {
                       <td className="px-4 py-3">
                         <div className="text-text-primary font-medium">
                           {u.name || u.username || u.email}
+                          {u.disabled && (
+                            <span className="bg-surface-tertiary text-text-secondary ms-2 rounded-full px-2 py-0.5 text-xs font-normal">
+                              {localize('com_ui_admin_users_badge_disabled')}
+                            </span>
+                          )}
                           {isSelf && (
                             <span className="text-text-secondary ms-2 text-xs font-normal">
                               {localize('com_ui_admin_users_you')}
@@ -171,6 +201,45 @@ export default function UsersView() {
                       </td>
                       <td className="text-text-secondary hidden px-4 py-3 sm:table-cell">
                         {formatDate(u.createdAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="nav"
+                            size="icon"
+                            aria-label={localize('com_ui_admin_users_edit_for', {
+                              0: u.name || u.email,
+                            })}
+                            onClick={() => setEditing(u)}
+                          >
+                            <Pencil className="size-4" aria-hidden="true" />
+                          </Button>
+                          {u.disabled ? (
+                            <Button
+                              variant="nav"
+                              size="icon"
+                              aria-label={localize('com_ui_admin_users_enable_for', {
+                                0: u.name || u.email,
+                              })}
+                              disabled={updateUser.isLoading}
+                              onClick={() => enableUser(u)}
+                            >
+                              <UserCheck className="size-4" aria-hidden="true" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="nav"
+                              size="icon"
+                              aria-label={localize('com_ui_admin_users_disable_for', {
+                                0: u.name || u.email,
+                              })}
+                              disabled={isSelf}
+                              onClick={() => setDisabling(u)}
+                            >
+                              <Ban className="size-4" aria-hidden="true" />
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

@@ -1320,6 +1320,11 @@ export const AUDIT_ACTIONS = [
   'audit.purged',
   /** An admin created an account; target `{ type: 'user', id, name }`. */
   'user.created',
+  /** An admin edited an account's profile or password; metadata names the fields, never values. */
+  'user.updated',
+  /** An admin turned an account off or back on; its sessions are retired on disable. */
+  'user.disabled',
+  'user.enabled',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -1349,6 +1354,9 @@ export const AUDIT_ACTION_CATEGORY: Record<AuditAction, AuditCategory> = {
   'user.deleted': 'user',
   'user.role_changed': 'user',
   'user.created': 'user',
+  'user.updated': 'user',
+  'user.disabled': 'user',
+  'user.enabled': 'user',
   'acl.granted': 'acl',
   'acl.revoked': 'acl',
   'acl.public_changed': 'acl',
@@ -1494,6 +1502,7 @@ export type AdminUserListItem = {
   avatar: string;
   role: string;
   provider: string;
+  disabled?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };

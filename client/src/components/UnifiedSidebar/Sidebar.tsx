@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import type { NavLink } from '~/common';
+import AuthPattern from '~/components/Auth/AuthPattern';
 import { isRtlElement } from '~/hooks/Nav/useDirection';
 import SidePanelNav from '~/components/SidePanel/Nav';
 import ExpandedPanel from './ExpandedPanel';
@@ -47,12 +48,13 @@ function Sidebar({
              *  the edge is drawn here. The panel and the content beside it now sit
              *  on the same surface, so the fill no longer separates them on its
              *  own and the boundary has to be a line in every theme. */
-            'border-border-light bg-surface-sidebar min-h-0 flex-1 overflow-hidden border-e',
+            'brand-surface from-surface-brand to-surface-brand-hover text-text-primary border-border-light relative isolate min-h-0 flex-1 overflow-hidden border-e bg-gradient-to-b',
             expanded ? 'opacity-100' : 'pointer-events-none opacity-0',
           )}
           style={{ transition: expanded ? 'opacity 200ms ease 80ms' : 'opacity 150ms ease' }}
           aria-hidden={!expanded}
         >
+          <AuthPattern className="-z-10" />
           <SidePanelNav links={links} />
         </nav>
       </div>

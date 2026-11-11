@@ -315,6 +315,7 @@ export type AdminUserListItem = {
   avatar: string;
   role: string;
   provider: string;
+  disabled?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -325,6 +326,14 @@ export type AdminCreateUserBody = {
   username?: string;
   password: string;
   role?: string;
+};
+
+export type AdminUpdateUserBody = {
+  name?: string;
+  email?: string;
+  username?: string;
+  password?: string;
+  disabled?: boolean;
 };
 
 export type AdminCreateUserResponse = { user: AdminUserListItem };

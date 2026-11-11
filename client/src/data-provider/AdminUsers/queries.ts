@@ -44,3 +44,17 @@ export const useCreateUserMutation = (): UseMutationResult<
     onSuccess: () => queryClient.invalidateQueries([QueryKeys.adminUsers]),
   });
 };
+
+export type UpdateUserVars = { userId: string } & t.AdminUpdateUserBody;
+
+export const useUpdateUserMutation = (): UseMutationResult<
+  t.AdminCreateUserResponse,
+  t.TError | undefined,
+  UpdateUserVars
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ userId, ...body }: UpdateUserVars) => dataService.updateAdminUser(userId, body),
+    { onSuccess: () => queryClient.invalidateQueries([QueryKeys.adminUsers]) },
+  );
+};

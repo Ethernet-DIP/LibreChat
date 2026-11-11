@@ -10,6 +10,7 @@ import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
 import useDirection, { inlineSide } from '~/hooks/Nav/useDirection';
 import AdminUsersButton from '~/components/Nav/AdminUsersButton';
 import useNewChat from '~/hooks/Conversations/useNewChat';
+import AuthPattern from '~/components/Auth/AuthPattern';
 import { lazyWithRecovery } from '~/lib/assets/lazy';
 import { useLocalize } from '~/hooks';
 
@@ -152,7 +153,8 @@ function ExpandedPanel({
   const toggleSidebarAriaKey = useShortcutAriaKey('toggleSidebar');
 
   return (
-    <div className="border-border-inset bg-surface-sidebar flex h-full shrink-0 flex-col gap-2 border-e px-2 py-2">
+    <div className="brand-surface from-surface-brand to-surface-brand-hover text-text-primary border-border-inset relative isolate flex h-full shrink-0 flex-col gap-2 overflow-hidden border-e bg-gradient-to-b px-2 py-2">
+      <AuthPattern className="-z-10" />
       <TooltipAnchor
         side={tooltipSide}
         description={toggleSidebarHint}

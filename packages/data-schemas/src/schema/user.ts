@@ -135,6 +135,11 @@ const userSchema: Schema<IUser> = new Schema<IUser>(
     credentialsChangedAt: {
       type: Date,
     },
+    /** Set by an admin: the account cannot sign in and its existing sessions stop working. */
+    disabled: {
+      type: Boolean,
+      default: false,
+    },
     twoFactorAcknowledgementNonceHash: {
       type: String,
       select: false,

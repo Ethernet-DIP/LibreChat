@@ -1652,6 +1652,13 @@ export function createAdminUser(body: q.AdminCreateUserBody): Promise<q.AdminCre
   return request.post(endpoints.adminUsers(), body);
 }
 
+export function updateAdminUser(
+  userId: string,
+  body: q.AdminUpdateUserBody,
+): Promise<q.AdminCreateUserResponse> {
+  return request.patch(endpoints.adminUser(userId), body);
+}
+
 /** Moves a user into `roleName`; the server ends their membership of the previous role. */
 export function addAdminRoleMember(
   roleName: string,

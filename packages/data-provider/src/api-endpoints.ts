@@ -623,6 +623,8 @@ export const roles = () => `${BASE_URL}/api/roles`;
 export const adminRoles = () => `${BASE_URL}/api/admin/roles`;
 export const adminUsers = (params: { limit?: number; offset?: number } = {}) =>
   `${BASE_URL}/api/admin/users${buildQuery(params)}`;
+export const adminUser = (userId: string) =>
+  `${BASE_URL}/api/admin/users/${encodeURIComponent(userId)}`;
 export const adminRoleMembers = (roleName: string) =>
   `${adminRoles()}/${encodeURIComponent(roleName)}/members`;
 export const adminRoleMember = (roleName: string, userId: string) =>

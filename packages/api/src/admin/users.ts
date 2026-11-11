@@ -51,7 +51,8 @@ const ERASURE_TARGET_FIELDS = ['role', 'tenantId', 'idOnTheSource', ...ERASURE_P
 /** The target's plain profile fields, which storage header templates such as the user email read. */
 export type ErasureTargetProfile = Partial<Pick<IUser, (typeof ERASURE_PROFILE_KEYS)[number]>>;
 
-const USER_LIST_FIELDS = '_id name username email avatar role provider createdAt updatedAt';
+const USER_LIST_FIELDS =
+  '_id name username email avatar role provider disabled createdAt updatedAt';
 
 /** The target account's identity, from which the caller builds storage and MCP cleanup. */
 export interface AdminErasureTarget {
@@ -95,6 +96,13 @@ export interface AdminUsersDeps {
   roleExists?: (name: string) => Promise<boolean>;
   recordAuditEntry?: RecordAuditEntry;
   auditFailClosed?: boolean;
+  /** Persists profile, password and `disabled` changes; the write bumps `updatedAt`, which retires
+   *  the cached auth document. */
+  updateUser?: (userId: string, data: Partial<IUser>) => Promise<IUser | null>;
+  /** Hashes a new password the way registration does. */
+  hashPassword?: (plain: string) => Promise<string>;
+  /** The deployment's minimum password length; 8 when unset. */
+  minPasswordLength?: number;
   findUsers: (
     searchCriteria: FilterQuery<IUser>,
     fieldsToSelect?: string | string[] | null,
@@ -157,6 +165,7 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps): {
   searchUsers: (req: ServerRequest, res: Response) => Promise<Response>;
   deleteUser: (req: ServerRequest, res: Response) => Promise<Response>;
   createUser: (req: ServerRequest, res: Response) => Promise<Response>;
+  updateUser: (req: ServerRequest, res: Response) => Promise<Response>;
 } {
   const emitAudit = createAdminAuditEmitter({
     recordAuditEntry: deps.recordAuditEntry,
@@ -204,6 +213,7 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps): {
         avatar: u.avatar ?? '',
         role: u.role ?? 'USER',
         provider: u.provider ?? 'local',
+        disabled: u.disabled === true,
         createdAt: u.createdAt?.toISOString(),
         updatedAt: u.updatedAt?.toISOString(),
       }));
@@ -338,6 +348,177 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps): {
     } catch (error) {
       logger.error('[adminUsers] createUser error:', getSafeErrorMetadata(error));
       return res.status(500).json({ error: 'Failed to create user' });
+    }
+  }
+
+  type UpdateUserError =
+    | CreateUserError
+    | 'nothing_to_update'
+    | 'email_locked'
+    | 'password_unsupported'
+    | 'cannot_disable_self'
+    | 'last_admin';
+
+  const updateUserFailure = (res: Response, status: number, code: UpdateUserError) =>
+    res.status(status).json({ error: code, code });
+
+  async function updateUserHandler(req: ServerRequest, res: Response) {
+    try {
+      const { updateUser, hashPassword } = deps;
+      if (!updateUser) {
+        return updateUserFailure(res, 501, 'unavailable');
+      }
+      const { id } = req.params as { id: string };
+      if (!isValidObjectIdString(id)) {
+        return res.status(400).json({ error: 'Invalid user ID format' });
+      }
+
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const changes: Partial<IUser> = {};
+      const fields: string[] = [];
+      if (body.name !== undefined) {
+        const name = typeof body.name === 'string' ? body.name.trim() : '';
+        if (name.length < 3 || name.length > 80) {
+          return updateUserFailure(res, 400, 'invalid_details');
+        }
+        changes.name = name;
+        fields.push('name');
+      }
+      if (body.username !== undefined) {
+        const username = typeof body.username === 'string' ? body.username.trim() : '';
+        if (username.length < 2 || username.length > 80) {
+          return updateUserFailure(res, 400, 'invalid_details');
+        }
+        changes.username = username;
+        fields.push('username');
+      }
+      if (body.email !== undefined) {
+        const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+        if (!email.includes('@') || email.length > 120) {
+          return updateUserFailure(res, 400, 'invalid_details');
+        }
+        changes.email = email;
+        fields.push('email');
+      }
+      if (body.password !== undefined) {
+        const password = typeof body.password === 'string' ? body.password : '';
+        if (
+          password.length < (deps.minPasswordLength ?? 8) ||
+          password.length > 128 ||
+          password.trim().length === 0 ||
+          !hashPassword
+        ) {
+          return updateUserFailure(res, 400, 'invalid_details');
+        }
+        changes.password = await hashPassword(password);
+        fields.push('password');
+      }
+      if (body.disabled !== undefined) {
+        if (typeof body.disabled !== 'boolean') {
+          return updateUserFailure(res, 400, 'invalid_details');
+        }
+        changes.disabled = body.disabled;
+      }
+      if (fields.length === 0 && changes.disabled === undefined) {
+        return updateUserFailure(res, 400, 'nothing_to_update');
+      }
+
+      const [target] = await findUsers({ _id: id }, `${USER_LIST_FIELDS} tenantId`, { limit: 1 });
+      if (!target) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const isLocal = (target.provider ?? 'local') === 'local';
+      if (changes.email !== undefined && changes.email !== target.email?.toLowerCase()) {
+        if (!isLocal) {
+          return updateUserFailure(res, 409, 'email_locked');
+        }
+        const [taken] = await findUsers({ email: changes.email }, '_id', { limit: 1 });
+        if (taken && taken._id?.toString() !== id) {
+          return updateUserFailure(res, 409, 'email_taken');
+        }
+      } else {
+        delete changes.email;
+        const index = fields.indexOf('email');
+        if (index >= 0) {
+          fields.splice(index, 1);
+        }
+      }
+      if (changes.password !== undefined && !isLocal) {
+        return updateUserFailure(res, 409, 'password_unsupported');
+      }
+
+      const wasDisabled = target.disabled === true;
+      const disabling = changes.disabled === true && !wasDisabled;
+      const enabling = changes.disabled === false && wasDisabled;
+      if (changes.disabled === wasDisabled) {
+        delete changes.disabled;
+      }
+      if (disabling) {
+        const callerId = req.user?._id?.toString() ?? req.user?.id;
+        if (callerId === id) {
+          return updateUserFailure(res, 403, 'cannot_disable_self');
+        }
+        if (target.role === SystemRoles.ADMIN) {
+          const activeAdmins = await countUsers({
+            role: SystemRoles.ADMIN,
+            disabled: { $ne: true },
+          });
+          if (activeAdmins <= 1) {
+            return updateUserFailure(res, 400, 'last_admin');
+          }
+        }
+      }
+
+      /** A new password or a disable retires every token issued before this instant. */
+      if (changes.password !== undefined || disabling) {
+        changes.credentialsChangedAt = new Date();
+      }
+      if (Object.keys(changes).length === 0) {
+        return updateUserFailure(res, 400, 'nothing_to_update');
+      }
+
+      const updated = await updateUser(id, changes);
+      if (!updated) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      if (disabling) {
+        await stopUserGenerations(id, target.tenantId, generationJobs);
+      }
+
+      const targetRef = { type: 'user', id, name: updated.name ?? target.name ?? '' };
+      if (fields.length > 0) {
+        await emitAudit(req, {
+          action: 'user.updated',
+          severity: fields.includes('password') ? 'warning' : 'info',
+          target: targetRef,
+          metadata: { fields: fields.join(',') },
+        });
+      }
+      if (disabling || enabling) {
+        await emitAudit(req, {
+          action: disabling ? 'user.disabled' : 'user.enabled',
+          severity: disabling ? 'warning' : 'info',
+          target: targetRef,
+        });
+      }
+
+      const user: AdminUserListItem = {
+        id,
+        name: updated.name ?? target.name ?? '',
+        username: updated.username ?? target.username ?? '',
+        email: updated.email ?? target.email ?? '',
+        avatar: updated.avatar ?? target.avatar ?? '',
+        role: updated.role ?? target.role ?? SystemRoles.USER,
+        provider: updated.provider ?? target.provider ?? 'local',
+        disabled: updated.disabled === true,
+        createdAt: updated.createdAt?.toISOString(),
+        updatedAt: updated.updatedAt?.toISOString(),
+      };
+      return res.status(200).json({ user });
+    } catch (error) {
+      logger.error('[adminUsers] updateUser error:', getSafeErrorMetadata(error));
+      return res.status(500).json({ error: 'Failed to update user' });
     }
   }
 
@@ -482,5 +663,6 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps): {
     searchUsers: searchUsersHandler,
     deleteUser: deleteUserHandler,
     createUser: createUserHandler,
+    updateUser: updateUserHandler,
   };
 }
